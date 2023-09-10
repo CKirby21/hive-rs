@@ -9,16 +9,34 @@ fn main() {
     // TODO make this a 3d array
     let mut board: [[Piece; TOTAL_PIECES]; TOTAL_PIECES] = [[create_piece(Bug::None, Player::None); TOTAL_PIECES]; TOTAL_PIECES];
     let mut selection =  (TOTAL_PIECES / 2, TOTAL_PIECES / 2);
-    print_board(board, selection);
-
+    
     let mut player_one_hand = create_hand(Player::One);
-    print_hand(player_one_hand);
-
+    
     let mut player_two_hand = create_hand(Player::Two);
-    print_hand(player_two_hand);
+    
+    print_board(board, selection);
+    print_hand(&player_one_hand);
+    print_hand(&player_two_hand);
+    
 
-    // player_one_hand[0] = 
-    // board[TOTAL_PIECES / 2][TOTAL_PIECES / 2] = ;
+    board[selection.0][selection.1] = player_one_hand.remove(0);
+
+    print_board(board, selection);
+    print_hand(&player_one_hand);
+    print_hand(&player_two_hand);
+
+    selection = (selection.0 + 2, selection.1);
+
+    print_board(board, selection);
+    print_hand(&player_one_hand);
+    print_hand(&player_two_hand);
+
+    board[selection.0][selection.1] = player_two_hand.remove(0);
+
+    print_board(board, selection);
+    print_hand(&player_one_hand);
+    print_hand(&player_two_hand);
+
 
     // print_board(board);
 
@@ -107,9 +125,9 @@ fn print_board(board: [[Piece; TOTAL_PIECES]; TOTAL_PIECES], selection: (usize, 
     println!();
 }
 
-fn print_hand(hand: Vec<Piece>) {
+fn print_hand(hand: &Vec<Piece>) {
     for piece in hand {
-        print_piece(piece, false);
+        print_piece(*piece, false);
     }
     println!();
 }
