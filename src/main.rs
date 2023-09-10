@@ -3,6 +3,28 @@ use std::fmt;
 // const TOTAL_PIECES: usize = 28;
 const TOTAL_PIECES: usize = 22;
 
+/////////////////////////////////////////////////////////////////////////
+
+fn main() {
+    // TODO make this a 3d array
+    let mut board: [[Piece; TOTAL_PIECES]; TOTAL_PIECES] = [[create_piece(Bug::None, Player::None); TOTAL_PIECES]; TOTAL_PIECES];
+    print_board(board);
+
+    let mut player_one_hand = create_hand(Player::One);
+    print_hand(player_one_hand);
+
+    let mut player_two_hand = create_hand(Player::Two);
+    print_hand(player_two_hand);
+
+    // player_one_hand[0] = 
+    // board[TOTAL_PIECES / 2][TOTAL_PIECES / 2] = ;
+
+    // print_board(board);
+
+}
+
+/////////////////////////////////////////////////////////////////////////
+
 #[derive(Debug, Copy, Clone, PartialEq)]
 enum Bug {
     None,
@@ -29,6 +51,8 @@ impl fmt::Display for Bug {
     }
 }
 
+/////////////////////////////////////////////////////////////////////////
+
 #[derive(Debug, Copy, Clone)]
 enum Player {
     None,
@@ -46,11 +70,26 @@ impl fmt::Display for Player {
     }
 }
 
+/////////////////////////////////////////////////////////////////////////
+
 #[derive(Debug, Copy, Clone)]
 struct Piece {
     bug: Bug,
     player: Player,
 }
+
+fn print_piece(piece: Piece) {
+    print!("{}-{} ", piece.bug, piece.player);
+}
+
+fn create_piece(bug: Bug, player: Player) -> Piece {
+    Piece {
+        bug,
+        player,
+    }
+}
+
+////////////////////////////////////////////////////////////////////////
 
 fn print_board(board: [[Piece; TOTAL_PIECES]; TOTAL_PIECES]) {
     for row in board {
@@ -67,17 +106,6 @@ fn print_hand(hand: Vec<Piece>) {
         print_piece(piece);
     }
     println!();
-}
-
-fn print_piece(piece: Piece) {
-    print!("{}-{} ", piece.bug, piece.player);
-}
-
-fn create_piece(bug: Bug, player: Player) -> Piece {
-    Piece {
-        bug,
-        player,
-    }
 }
 
 // fn check_for_piece_in_hand(hand: [Piece; PLAYER_PIECES], desired_piece: Piece) -> bool {
@@ -104,22 +132,4 @@ fn create_hand(player: Player) -> Vec<Piece> {
         create_piece(Bug::Beetle, player),
     ];
     hand
-}
-
-fn main() {
-    // TODO make this a 3d array
-    let mut board: [[Piece; TOTAL_PIECES]; TOTAL_PIECES] = [[create_piece(Bug::None, Player::None); TOTAL_PIECES]; TOTAL_PIECES];
-    print_board(board);
-
-    let mut player_one_hand = create_hand(Player::One);
-    print_hand(player_one_hand);
-
-    let mut player_two_hand = create_hand(Player::Two);
-    print_hand(player_two_hand);
-
-    // player_one_hand[0] = 
-    // board[TOTAL_PIECES / 2][TOTAL_PIECES / 2] = ;
-
-    // print_board(board);
-
 }
