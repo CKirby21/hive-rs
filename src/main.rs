@@ -8,7 +8,8 @@ const TOTAL_PIECES: usize = 22;
 fn main() {
     // TODO make this a 3d array
     let mut board: [[Piece; TOTAL_PIECES]; TOTAL_PIECES] = [[create_piece(Bug::None, Player::None); TOTAL_PIECES]; TOTAL_PIECES];
-    print_board(board);
+    let mut selection =  (TOTAL_PIECES / 2, TOTAL_PIECES / 2);
+    print_board(board, selection);
 
     let mut player_one_hand = create_hand(Player::One);
     print_hand(player_one_hand);
@@ -41,7 +42,7 @@ enum Bug {
 impl fmt::Display for Bug {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            Bug::None => write!(f, "N"),
+            Bug::None => write!(f, " "),
             Bug::Grasshopper => write!(f, "G"),
             Bug::Spider => write!(f, "S"),
             Bug::Ant => write!(f, "A"),
@@ -63,7 +64,7 @@ enum Player {
 impl fmt::Display for Player {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            Player::None => write!(f, "N"),
+            Player::None => write!(f, " "),
             Player::One => write!(f, "1"),
             Player::Two => write!(f, "2"),
         }
@@ -78,8 +79,12 @@ struct Piece {
     player: Player,
 }
 
-fn print_piece(piece: Piece) {
-    print!("{}-{} ", piece.bug, piece.player);
+fn print_piece(piece: Piece, selected: bool) {
+    if selected {
+        print!(" |{}-{}| ", piece.bug, piece.player);
+    } else {
+        print!("  {}-{}  ", piece.bug, piece.player);
+    }
 }
 
 fn create_piece(bug: Bug, player: Player) -> Piece {
@@ -91,10 +96,11 @@ fn create_piece(bug: Bug, player: Player) -> Piece {
 
 ////////////////////////////////////////////////////////////////////////
 
-fn print_board(board: [[Piece; TOTAL_PIECES]; TOTAL_PIECES]) {
-    for row in board {
-        for element in row {
-            print_piece(element);
+fn print_board(board: [[Piece; TOTAL_PIECES]; TOTAL_PIECES], selection: (usize, usize)) {
+    for i in 0..board.len() {
+        for j in 0..board[i].len() {
+            let selected: bool = i == selection.0 && j == selection.1; 
+            print_piece(board[i][j], selected);
         }
         println!();
     }
@@ -103,7 +109,7 @@ fn print_board(board: [[Piece; TOTAL_PIECES]; TOTAL_PIECES]) {
 
 fn print_hand(hand: Vec<Piece>) {
     for piece in hand {
-        print_piece(piece);
+        print_piece(piece, false);
     }
     println!();
 }
