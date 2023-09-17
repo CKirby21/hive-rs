@@ -4,6 +4,8 @@ use console::Term;
 
 // const TOTAL_PIECES: usize = 28;
 const TOTAL_PIECES: usize = 22;
+const ADVANCE_KEY: char = ' ';
+const BACK_KEY: char = '\t';
 
 /////////////////////////////////////////////////////////////////////////
 
@@ -30,22 +32,10 @@ fn main() {
         state,
     };
     
-    // print_game(&game);
-
-    // game.board[game.board_selection.0][game.board_selection.1] = game.player_one_hand.remove(0);
-
-    // print_game(&game);
-
-    // game.board_selection = (game.board_selection.0 + 2, game.board_selection.1);
-
-    // print_game(&game);
-
-    // game.board[game.board_selection.0][game.board_selection.1] = game.player_two_hand.remove(0);
-
     print_game(&game);
 
     let stdout = Term::buffered_stdout();
-    const INDICES_TO_MOVE: usize = 2;
+    const INDICES_TO_MOVE: usize = 1;
 
     'game_loop: loop {
         if let Ok(character) = stdout.read_char() {
@@ -62,7 +52,7 @@ fn main() {
                                 game.player_one_hand_selection += 1;
                             }
                         },
-                        ' ' => {
+                        ADVANCE_KEY => {
                             game.state = State::PlayerOneSelectPieceLocation;
                         },
                         _ => continue,
@@ -90,10 +80,10 @@ fn main() {
                                 game.board_selection = (game.board_selection.0, game.board_selection.1 + INDICES_TO_MOVE);
                             }
                         },
-                        ' ' => {
+                        ADVANCE_KEY => {
                             game.state = State::PlayerOneConfirmPieceLocation;
                         },
-                        '\t' => {
+                        BACK_KEY => {
                             game.state = State::PlayerOneSelectPiece;
                         },
                         _ => continue,
@@ -101,10 +91,13 @@ fn main() {
                 },
                 State::PlayerOneConfirmPieceLocation => {
                     match character {
-                        ' ' => {
+                        ADVANCE_KEY => {
+                            game.board[game.board_selection.0][game.board_selection.1] = game.player_one_hand.remove(game.player_one_hand_selection);
+                            // TODO Handle when vector is size 0
+                            game.player_one_hand_selection = 0;
                             game.state = State::PlayerTwoSelectPiece;
                         },
-                        '\t' => {
+                        BACK_KEY => {
                             game.state = State::PlayerOneSelectPieceLocation;
                         },
                         _ => continue,
@@ -122,7 +115,7 @@ fn main() {
                                 game.player_two_hand_selection += 1;
                             }
                         },
-                        ' ' => {
+                        ADVANCE_KEY => {
                             game.state = State::PlayerTwoSelectPieceLocation;
                         },
                         _ => continue,
@@ -150,10 +143,10 @@ fn main() {
                                 game.board_selection = (game.board_selection.0, game.board_selection.1 + INDICES_TO_MOVE);
                             }
                         },
-                        ' ' => {
+                        ADVANCE_KEY => {
                             game.state = State::PlayerTwoConfirmPieceLocation;
                         },
-                        '\t' => {
+                        BACK_KEY => {
                             game.state = State::PlayerTwoSelectPiece;
                         },
                         _ => continue,
@@ -161,10 +154,13 @@ fn main() {
                 },
                 State::PlayerTwoConfirmPieceLocation => {
                     match character {
-                        ' ' => {
+                        ADVANCE_KEY => {
+                            game.board[game.board_selection.0][game.board_selection.1] = game.player_two_hand.remove(game.player_two_hand_selection);
+                            // TODO Handle when vector is size 0
+                            game.player_two_hand_selection = 0;
                             game.state = State::PlayerOneSelectPiece;
                         },
-                        '\t' => {
+                        BACK_KEY => {
                             game.state = State::PlayerTwoSelectPieceLocation;
                         },
                         _ => continue,
@@ -233,9 +229,9 @@ struct Piece {
 
 fn print_piece(piece: Piece, selected: bool) {
     if selected {
-        print!(" |{}-{}| ", piece.bug, piece.player);
+        print!("|{}-{}|", piece.bug, piece.player);
     } else {
-        print!("  {}-{}  ", piece.bug, piece.player);
+        print!(" {}-{} ", piece.bug, piece.player);
     }
 }
 
@@ -260,11 +256,27 @@ struct Game {
 }
 
 fn print_game(game: &Game) {
-    print_board(game.board, game.board_selection);
+    println!();
+    println!();
+    println!();
+    println!();
+    println!();
+    println!();
+    println!();
+    println!();
+    println!();
+    println!();
+    println!();
+    println!();
+    println!();
+    println!();
+    println!();
+    println!("                                           {}", game.state);
+    println!();
     print_hand(&game.player_one_hand, game.player_one_hand_selection);
     print_hand(&game.player_two_hand, game.player_two_hand_selection);
     println!();
-    println!("{}", game.state);
+    print_board(game.board, game.board_selection);
 }
 
 ////////////////////////////////////////////////////////////////////////
@@ -282,12 +294,12 @@ enum State {
 impl fmt::Display for State {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            State::PlayerOneSelectPiece => write!(f, "Select a piece Player 1"),
-            State::PlayerOneSelectPieceLocation => write!(f, "Choose where the piece shall go Player 1"),
-            State::PlayerOneConfirmPieceLocation => write!(f, "Are you sure about that Player 1?"),
-            State::PlayerTwoSelectPiece => write!(f, "Select a piece Player 2"),
-            State::PlayerTwoSelectPieceLocation => write!(f, "Choose where the piece shall go Player 2"),
-            State::PlayerTwoConfirmPieceLocation => write!(f, "Are you sure about that Player 2"),
+            State::PlayerOneSelectPiece => write!(f, "Player 1: Select a bug"),
+            State::PlayerOneSelectPieceLocation => write!(f, "Player 1: Choose a location"),
+            State::PlayerOneConfirmPieceLocation => write!(f, "Player 1: Are you quite sure about that?"),
+            State::PlayerTwoSelectPiece => write!(f, "Player 2: Select a bug"),
+            State::PlayerTwoSelectPieceLocation => write!(f, "Player 2: Choose a location"),
+            State::PlayerTwoConfirmPieceLocation => write!(f, "Player 2: Are you quite sure about that?"),
         }
     }
 }
@@ -318,6 +330,7 @@ fn print_board(board: [[Piece; TOTAL_PIECES]; TOTAL_PIECES], selection: (usize, 
 }
 
 fn print_hand(hand: &[Piece], selection: usize) {
+    print!("                              ");
     for (i, piece) in hand.iter().enumerate() {
         let selected = i == selection;
         print_piece(*piece, selected);
