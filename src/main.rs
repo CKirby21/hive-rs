@@ -1,9 +1,9 @@
 use std::fmt;
 
 use console::Term;
+use colored::Colorize;
 
-// const TOTAL_PIECES: usize = 28;
-const TOTAL_PIECES: usize = 22;
+const BOARD_SIZE: usize = 35;
 const ADVANCE_KEY: char = ' ';
 const BACK_KEY: char = '\t';
 const UP_KEY: char = 'w';
@@ -15,8 +15,8 @@ const RIGHT_KEY: char = 'd';
 
 fn main() {
     // TODO make this a 3d array
-    let mut board: [[Piece; TOTAL_PIECES]; TOTAL_PIECES] = [[create_piece(Bug::None, Player::None); TOTAL_PIECES]; TOTAL_PIECES];
-    let mut board_selection =  (TOTAL_PIECES / 2, TOTAL_PIECES / 2);
+    let mut board: [[Piece; BOARD_SIZE]; BOARD_SIZE] = [[create_piece(Bug::None, Player::None); BOARD_SIZE]; BOARD_SIZE];
+    let mut board_selection =  (BOARD_SIZE / 2, BOARD_SIZE / 2);
     
     let mut player_one_hand = create_hand(Player::One);
     let mut player_one_hand_selection = 0;
@@ -75,12 +75,12 @@ fn main() {
                             }
                         },
                         DOWN_KEY => {
-                            if game.board_selection.0 < game.board.len() - INDICES_TO_MOVE {
+                            if game.board_selection.0 < BOARD_SIZE - INDICES_TO_MOVE {
                                 game.board_selection = (game.board_selection.0 + INDICES_TO_MOVE, game.board_selection.1);
                             }
                         },
                         RIGHT_KEY => {
-                            if game.board_selection.1 < game.board.len() - INDICES_TO_MOVE {
+                            if game.board_selection.1 < BOARD_SIZE - INDICES_TO_MOVE {
                                 game.board_selection = (game.board_selection.0, game.board_selection.1 + INDICES_TO_MOVE);
                             }
                         },
@@ -138,12 +138,12 @@ fn main() {
                             }
                         },
                         DOWN_KEY => {
-                            if game.board_selection.0 < game.board.len() - INDICES_TO_MOVE {
+                            if game.board_selection.0 < BOARD_SIZE - INDICES_TO_MOVE {
                                 game.board_selection = (game.board_selection.0 + INDICES_TO_MOVE, game.board_selection.1);
                             }
                         },
                         RIGHT_KEY => {
-                            if game.board_selection.1 < game.board.len() - INDICES_TO_MOVE {
+                            if game.board_selection.1 < BOARD_SIZE - INDICES_TO_MOVE {
                                 game.board_selection = (game.board_selection.0, game.board_selection.1 + INDICES_TO_MOVE);
                             }
                         },
@@ -194,7 +194,7 @@ enum Bug {
 impl fmt::Display for Bug {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            Bug::None => write!(f, " "),
+            Bug::None => write!(f, "-"),
             Bug::Grasshopper => write!(f, "G"),
             Bug::Spider => write!(f, "S"),
             Bug::Ant => write!(f, "A"),
@@ -216,7 +216,7 @@ enum Player {
 impl fmt::Display for Player {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            Player::None => write!(f, " "),
+            Player::None => write!(f, "-"),
             Player::One => write!(f, "1"),
             Player::Two => write!(f, "2"),
         }
@@ -232,10 +232,17 @@ struct Piece {
 }
 
 fn print_piece(piece: Piece, selected: bool) {
+    let piece_string = format!("{}{}", piece.bug, piece.player);
+    let piece_string_colored = match piece.player {
+        Player::One => piece_string.blue(),
+        Player::Two => piece_string.red(),
+        _ => piece_string.white(),
+    };
+
     if selected {
-        print!("|{}-{}|", piece.bug, piece.player);
+        print!("|{}|", piece_string_colored);
     } else {
-        print!(" {}-{} ", piece.bug, piece.player);
+        print!(" {} ", piece_string_colored);
     }
 }
 
@@ -250,7 +257,7 @@ fn create_piece(bug: Bug, player: Player) -> Piece {
 
 #[derive(Debug)]
 struct Game {
-    board: [[Piece; TOTAL_PIECES]; TOTAL_PIECES],
+    board: [[Piece; BOARD_SIZE]; BOARD_SIZE],
     board_selection: (usize, usize),
     player_one_hand: Vec<Piece>,
     player_one_hand_selection: usize,
@@ -275,7 +282,7 @@ fn print_game(game: &Game) {
     println!();
     println!();
     println!();
-    println!("                                           {}", game.state);
+    println!("                                                          {}", game.state);
     println!();
     print_hand(&game.player_one_hand, game.player_one_hand_selection);
     print_hand(&game.player_two_hand, game.player_two_hand_selection);
@@ -322,7 +329,7 @@ fn clamp(min: i32, value: i32, max: i32) -> i32 {
     }
 }
 
-fn print_board(board: [[Piece; TOTAL_PIECES]; TOTAL_PIECES], selection: (usize, usize)) {
+fn print_board(board: [[Piece; BOARD_SIZE]; BOARD_SIZE], selection: (usize, usize)) {
     for (i, row) in board.iter().enumerate() {
         for (j, piece) in row.iter().enumerate() {
             let selected: bool = i == selection.0 && j == selection.1; 
@@ -330,11 +337,10 @@ fn print_board(board: [[Piece; TOTAL_PIECES]; TOTAL_PIECES], selection: (usize, 
         }
         println!();
     }
-    println!();
 }
 
 fn print_hand(hand: &[Piece], selection: usize) {
-    print!("                              ");
+    print!("                                                  ");
     for (i, piece) in hand.iter().enumerate() {
         let selected = i == selection;
         print_piece(*piece, selected);
