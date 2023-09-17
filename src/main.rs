@@ -10,32 +10,32 @@ const TOTAL_PIECES: usize = 22;
 fn main() {
     // TODO make this a 3d array
     let mut board: [[Piece; TOTAL_PIECES]; TOTAL_PIECES] = [[create_piece(Bug::None, Player::None); TOTAL_PIECES]; TOTAL_PIECES];
-    let mut selection =  (TOTAL_PIECES / 2, TOTAL_PIECES / 2);
+    let mut board_selection =  (TOTAL_PIECES / 2, TOTAL_PIECES / 2);
     
     let mut player_one_hand = create_hand(Player::One);
     
     let mut player_two_hand = create_hand(Player::Two);
     
-    print_board(board, selection);
+    print_board(board, board_selection);
     print_hand(&player_one_hand);
     print_hand(&player_two_hand);
     
 
-    board[selection.0][selection.1] = player_one_hand.remove(0);
+    board[board_selection.0][board_selection.1] = player_one_hand.remove(0);
 
-    print_board(board, selection);
+    print_board(board, board_selection);
     print_hand(&player_one_hand);
     print_hand(&player_two_hand);
 
-    selection = (selection.0 + 2, selection.1);
+    board_selection = (board_selection.0 + 2, board_selection.1);
 
-    print_board(board, selection);
+    print_board(board, board_selection);
     print_hand(&player_one_hand);
     print_hand(&player_two_hand);
 
-    board[selection.0][selection.1] = player_two_hand.remove(0);
+    board[board_selection.0][board_selection.1] = player_two_hand.remove(0);
 
-    print_board(board, selection);
+    print_board(board, board_selection);
     print_hand(&player_one_hand);
     print_hand(&player_two_hand);
 
@@ -46,28 +46,28 @@ fn main() {
         if let Ok(character) = stdout.read_char() {
             match character {
                 'w' => {
-                    if selection.0 >= INDICES_TO_MOVE {
-                        selection = (selection.0 - INDICES_TO_MOVE, selection.1);
+                    if board_selection.0 >= INDICES_TO_MOVE {
+                        board_selection = (board_selection.0 - INDICES_TO_MOVE, board_selection.1);
                     }
                 },
                 'a' => {
-                    if selection.1 >= INDICES_TO_MOVE {
-                        selection = (selection.0, selection.1 - INDICES_TO_MOVE);
+                    if board_selection.1 >= INDICES_TO_MOVE {
+                        board_selection = (board_selection.0, board_selection.1 - INDICES_TO_MOVE);
                     }
                 },
                 's' => {
-                    if selection.0 < TOTAL_PIECES - INDICES_TO_MOVE {
-                        selection = (selection.0 + INDICES_TO_MOVE, selection.1);
+                    if board_selection.0 < TOTAL_PIECES - INDICES_TO_MOVE {
+                        board_selection = (board_selection.0 + INDICES_TO_MOVE, board_selection.1);
                     }
                 },
                 'd' => {
-                    if selection.1 < TOTAL_PIECES - INDICES_TO_MOVE {
-                        selection = (selection.0, selection.1 + INDICES_TO_MOVE);
+                    if board_selection.1 < TOTAL_PIECES - INDICES_TO_MOVE {
+                        board_selection = (board_selection.0, board_selection.1 + INDICES_TO_MOVE);
                     }
                 },
                 _ => break 'game_loop,
             }
-            print_board(board, selection);
+            print_board(board, board_selection);
             print_hand(&player_one_hand);
             print_hand(&player_two_hand);
         }
