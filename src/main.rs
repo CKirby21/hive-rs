@@ -4,8 +4,8 @@ use console::Term;
 use colored::Colorize;
 
 const BOARD_SIZE: usize = 35;
-const ADVANCE_KEY: char = ' ';
-const BACK_KEY: char = '\t';
+const ADVANCE_KEY: char = 'e';
+const BACK_KEY: char = 'q';
 const UP_KEY: char = 'w';
 const LEFT_KEY: char = 'a';
 const DOWN_KEY: char = 's';
@@ -20,6 +20,7 @@ fn main() {
     let player_one = Player::new(PlayerNumber::One);
     let player_two = Player::new(PlayerNumber::Two);
     let state = State::PlayerOneSelectFirstPiece;
+    let old_piece_location = (0, 0); // FIXME I dont like this variable
 
     let mut game = Game {
         board,
@@ -27,6 +28,7 @@ fn main() {
         player_one,
         player_two,
         state,
+        old_piece_location,
     };
     
     print_game(&game);
@@ -34,6 +36,7 @@ fn main() {
     let stdout = Term::buffered_stdout();
 
     'game_loop: loop {
+        print_game(&game);
         if let Ok(character) = stdout.read_char() {
             match game.state {
                 State::PlayerOneSelectFirstPiece => {
@@ -75,12 +78,12 @@ fn main() {
                             game.player_one.move_right_in_hand();
                         },
                         ADVANCE_KEY => {
-                            game.state = State::PlayerOneSelectPieceLocation;
+                            game.state = State::PlayerOneSelectPlacingLocation;
                         },
                         _ => continue,
                     }
                 },
-                State::PlayerOneSelectPieceLocation => {
+                State::PlayerOneSelectPlacingLocation => {
                     match character {
                         UP_KEY => {
                             move_up_on_the_board(&mut game);
@@ -95,7 +98,7 @@ fn main() {
                             move_right_on_the_board(&mut game);
                         },
                         ADVANCE_KEY => {
-                            game.state = State::PlayerOneConfirmPieceLocation;
+                            game.state = State::PlayerOneConfirmPlacingLocation;
                         },
                         BACK_KEY => {
                             game.state = State::PlayerOneSelectPiece;
@@ -103,7 +106,7 @@ fn main() {
                         _ => continue,
                     }
                 },
-                State::PlayerOneConfirmPieceLocation => {
+                State::PlayerOneConfirmPlacingLocation => {
                     match character {
                         ADVANCE_KEY => {
                             place_player_one_selected_piece(&mut game);
@@ -113,7 +116,63 @@ fn main() {
                             game.state = State::PlayerTwoSelectPiece;
                         },
                         BACK_KEY => {
-                            game.state = State::PlayerOneSelectPieceLocation;
+                            game.state = State::PlayerOneSelectPlacingLocation;
+                        },
+                        _ => continue,
+                    }
+                },
+                State::PlayerOneSelectPieceOnBoard => {
+                    match character {
+                        UP_KEY => {
+                            move_up_on_the_board(&mut game);
+                        },
+                        LEFT_KEY => {
+                            move_left_on_the_board(&mut game);
+                        },
+                        DOWN_KEY => {
+                            move_down_on_the_board(&mut game);
+                        },
+                        RIGHT_KEY => {
+                            move_right_on_the_board(&mut game);
+                        },
+                        ADVANCE_KEY => {
+                            game.old_piece_location = game.board_selection;
+                            game.state = State::PlayerOneSelectMovingLocation;
+                        },
+                        _ => continue,
+                    }
+                },
+                State::PlayerOneSelectMovingLocation => {
+                    match character {
+                        UP_KEY => {
+                            move_up_on_the_board(&mut game);
+                        },
+                        LEFT_KEY => {
+                            move_left_on_the_board(&mut game);
+                        },
+                        DOWN_KEY => {
+                            move_down_on_the_board(&mut game);
+                        },
+                        RIGHT_KEY => {
+                            move_right_on_the_board(&mut game);
+                        },
+                        ADVANCE_KEY => {
+                            game.state = State::PlayerOneConfirmMovingLocation;
+                        },
+                        BACK_KEY => {
+                            game.state = State::PlayerOneSelectPieceOnBoard;
+                        },
+                        _ => continue,
+                    }
+                },
+                State::PlayerOneConfirmMovingLocation => {
+                    match character {
+                        ADVANCE_KEY => {
+                            move_piece(&mut game);
+                            game.state = State::PlayerOneSelectPiece;
+                        },
+                        BACK_KEY => {
+                            game.state = State::PlayerOneSelectMovingLocation;
                         },
                         _ => continue,
                     }
@@ -128,12 +187,12 @@ fn main() {
                             game.player_two.move_right_in_hand();
                         },
                         ADVANCE_KEY => {
-                            game.state = State::PlayerTwoSelectPieceLocation;
+                            game.state = State::PlayerTwoSelectPlacingLocation;
                         },
                         _ => continue,
                     }
                 },
-                State::PlayerTwoSelectPieceLocation => {
+                State::PlayerTwoSelectPlacingLocation => {
                     match character {
                         UP_KEY => {
                             move_up_on_the_board(&mut game);
@@ -148,7 +207,7 @@ fn main() {
                             move_right_on_the_board(&mut game);
                         },
                         ADVANCE_KEY => {
-                            game.state = State::PlayerTwoConfirmPieceLocation;
+                            game.state = State::PlayerTwoConfirmPlacingLocation;
                         },
                         BACK_KEY => {
                             game.state = State::PlayerTwoSelectPiece;
@@ -156,7 +215,7 @@ fn main() {
                         _ => continue,
                     }
                 },
-                State::PlayerTwoConfirmPieceLocation => {
+                State::PlayerTwoConfirmPlacingLocation => {
                     match character {
                         ADVANCE_KEY => {
                             place_player_two_selected_piece(&mut game);
@@ -166,13 +225,12 @@ fn main() {
                             game.state = State::PlayerOneSelectPiece;
                         },
                         BACK_KEY => {
-                            game.state = State::PlayerTwoSelectPieceLocation;
+                            game.state = State::PlayerTwoSelectPlacingLocation;
                         },
                         _ => continue,
                     }
                 },
             }
-            print_game(&game);
         }
     }
 }
@@ -291,6 +349,7 @@ struct Game {
     player_one: Player,
     player_two: Player,
     state: State,
+    old_piece_location: (usize, usize), // FIXME move somewhere else
 }
 
 fn move_up_on_the_board(game: &mut Game) {
@@ -325,6 +384,12 @@ fn place_player_two_selected_piece(game: &mut Game) {
     game.board[game.board_selection.0][game.board_selection.1] = game.player_two.hand.remove(game.player_one.hand_selection);
 }
 
+fn move_piece(game: &mut Game) {
+    // TODO Check that the selection can be moved to by the piece
+    game.board[game.board_selection.0][game.board_selection.1] = game.board[game.old_piece_location.0][game.old_piece_location.1];
+    game.board[game.old_piece_location.0][game.old_piece_location.1] = create_piece(Bug::None, PlayerNumber::None);
+}
+
 fn print_game(game: &Game) {
     let mut player_one_show_selection = false;
     let mut player_two_show_selection = false;
@@ -333,11 +398,14 @@ fn print_game(game: &Game) {
         State::PlayerOneSelectFirstPiece => player_one_show_selection = true,
         State::PlayerOneConfirmFirstPiece => board_show_selection = true,
         State::PlayerOneSelectPiece => player_one_show_selection = true,
-        State::PlayerOneSelectPieceLocation => board_show_selection = true,
-        State::PlayerOneConfirmPieceLocation => board_show_selection = true,
+        State::PlayerOneSelectPlacingLocation => board_show_selection = true,
+        State::PlayerOneConfirmPlacingLocation => board_show_selection = true,
+        State::PlayerOneSelectPieceOnBoard => board_show_selection = true,
+        State::PlayerOneSelectMovingLocation => board_show_selection = true,
+        State::PlayerOneConfirmMovingLocation => board_show_selection = true,
         State::PlayerTwoSelectPiece => player_two_show_selection = true,
-        State::PlayerTwoSelectPieceLocation => board_show_selection = true,
-        State::PlayerTwoConfirmPieceLocation => board_show_selection = true,
+        State::PlayerTwoSelectPlacingLocation => board_show_selection = true,
+        State::PlayerTwoConfirmPlacingLocation => board_show_selection = true,
     };
     println!();
     println!();
@@ -369,11 +437,14 @@ enum State {
     PlayerOneSelectFirstPiece,
     PlayerOneConfirmFirstPiece,
     PlayerOneSelectPiece,
-    PlayerOneSelectPieceLocation,
-    PlayerOneConfirmPieceLocation,
+    PlayerOneSelectPlacingLocation,
+    PlayerOneConfirmPlacingLocation,
+    PlayerOneSelectPieceOnBoard,
+    PlayerOneSelectMovingLocation,
+    PlayerOneConfirmMovingLocation,
     PlayerTwoSelectPiece,
-    PlayerTwoSelectPieceLocation,
-    PlayerTwoConfirmPieceLocation
+    PlayerTwoSelectPlacingLocation,
+    PlayerTwoConfirmPlacingLocation,
 }
 
 fn print_prompt(state: &State) {
@@ -381,21 +452,27 @@ fn print_prompt(state: &State) {
         State::PlayerOneSelectFirstPiece => "Player 1: Select a bug",
         State::PlayerOneConfirmFirstPiece => "Player 1: Are you quite sure about that?",
         State::PlayerOneSelectPiece => "Player 1: Select a bug",
-        State::PlayerOneSelectPieceLocation => "Player 1: Choose a location",
-        State::PlayerOneConfirmPieceLocation => "Player 1: Are you quite sure about that?",
+        State::PlayerOneSelectPlacingLocation => "Player 1: Choose a location",
+        State::PlayerOneConfirmPlacingLocation => "Player 1: Are you quite sure about that?",
+        State::PlayerOneSelectPieceOnBoard => "Player 1: Select a bug",
+        State::PlayerOneSelectMovingLocation => "Player 1: Choose a location",
+        State::PlayerOneConfirmMovingLocation => "Player 1: Are you quite sure about that?",
         State::PlayerTwoSelectPiece => "Player 2: Select a bug",
-        State::PlayerTwoSelectPieceLocation => "Player 2: Choose a location",
-        State::PlayerTwoConfirmPieceLocation => "Player 2: Are you quite sure about that?",
+        State::PlayerTwoSelectPlacingLocation => "Player 2: Choose a location",
+        State::PlayerTwoConfirmPlacingLocation => "Player 2: Are you quite sure about that?",
     };
     let player_ones_turn = match state {
         State::PlayerOneSelectFirstPiece => true,
         State::PlayerOneConfirmFirstPiece => true,
         State::PlayerOneSelectPiece => true,
-        State::PlayerOneSelectPieceLocation => true,
-        State::PlayerOneConfirmPieceLocation => true,
+        State::PlayerOneSelectPlacingLocation => true,
+        State::PlayerOneConfirmPlacingLocation => true,
+        State::PlayerOneSelectPieceOnBoard => true,
+        State::PlayerOneSelectMovingLocation => true,
+        State::PlayerOneConfirmMovingLocation => true,
         State::PlayerTwoSelectPiece => false,
-        State::PlayerTwoSelectPieceLocation => false,
-        State::PlayerTwoConfirmPieceLocation => false,
+        State::PlayerTwoSelectPlacingLocation => false,
+        State::PlayerTwoConfirmPlacingLocation => false,
     };
     let prompt_string_colored = if player_ones_turn { prompt_string.blue() } else { prompt_string.red() };
     println!("                                                  {}", prompt_string_colored);
