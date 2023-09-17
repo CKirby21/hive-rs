@@ -447,15 +447,6 @@ fn print_hand(hand: &[Piece], selection: usize, show_selection: bool) {
     println!();
 }
 
-// fn check_for_piece_in_hand(hand: [Piece; PLAYER_PIECES], desired_piece: Piece) -> bool {
-//     for piece in hand {
-//         if piece.bug == desired_piece.bug {
-//             return true;
-//         }
-//     }
-//     return false;
-// }
-
 fn create_hand(player: PlayerNumber) -> Vec<Piece> {
     let mut hand: Vec<Piece> = vec![
         create_piece(Bug::Grasshopper, player),
