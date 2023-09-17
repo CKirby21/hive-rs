@@ -6,6 +6,10 @@ use console::Term;
 const TOTAL_PIECES: usize = 22;
 const ADVANCE_KEY: char = ' ';
 const BACK_KEY: char = '\t';
+const UP_KEY: char = 'w';
+const LEFT_KEY: char = 'a';
+const DOWN_KEY: char = 's';
+const RIGHT_KEY: char = 'd';
 
 /////////////////////////////////////////////////////////////////////////
 
@@ -42,12 +46,12 @@ fn main() {
             match game.state {
                 State::PlayerOneSelectPiece => {
                     match character {
-                        'a' => {
+                        LEFT_KEY => {
                             if game.player_one_hand_selection > 0 {
                                 game.player_one_hand_selection -= 1;
                             }
                         },
-                        'd' => {
+                        RIGHT_KEY => {
                             if game.player_one_hand_selection < game.player_one_hand.len() - 1 {
                                 game.player_one_hand_selection += 1;
                             }
@@ -60,23 +64,23 @@ fn main() {
                 },
                 State::PlayerOneSelectPieceLocation => {
                     match character {
-                        'w' => {
+                        UP_KEY => {
                             if game.board_selection.0 >= INDICES_TO_MOVE {
                                 game.board_selection = (game.board_selection.0 - INDICES_TO_MOVE, game.board_selection.1);
                             }
                         },
-                        'a' => {
+                        LEFT_KEY => {
                             if game.board_selection.1 >= INDICES_TO_MOVE {
                                 game.board_selection = (game.board_selection.0, game.board_selection.1 - INDICES_TO_MOVE);
                             }
                         },
-                        's' => {
-                            if game.board_selection.0 < TOTAL_PIECES - INDICES_TO_MOVE {
+                        DOWN_KEY => {
+                            if game.board_selection.0 < game.board.len() - INDICES_TO_MOVE {
                                 game.board_selection = (game.board_selection.0 + INDICES_TO_MOVE, game.board_selection.1);
                             }
                         },
-                        'd' => {
-                            if game.board_selection.1 < TOTAL_PIECES - INDICES_TO_MOVE {
+                        RIGHT_KEY => {
+                            if game.board_selection.1 < game.board.len() - INDICES_TO_MOVE {
                                 game.board_selection = (game.board_selection.0, game.board_selection.1 + INDICES_TO_MOVE);
                             }
                         },
@@ -105,12 +109,12 @@ fn main() {
                 },
                 State::PlayerTwoSelectPiece => {
                     match character {
-                        'a' => {
+                        LEFT_KEY => {
                             if game.player_two_hand_selection > 0 {
                                 game.player_two_hand_selection -= 1;
                             }
                         },
-                        'd' => {
+                        RIGHT_KEY => {
                             if game.player_two_hand_selection < game.player_two_hand.len() - 1 {
                                 game.player_two_hand_selection += 1;
                             }
@@ -123,23 +127,23 @@ fn main() {
                 },
                 State::PlayerTwoSelectPieceLocation => {
                     match character {
-                        'w' => {
+                        UP_KEY => {
                             if game.board_selection.0 >= INDICES_TO_MOVE {
                                 game.board_selection = (game.board_selection.0 - INDICES_TO_MOVE, game.board_selection.1);
                             }
                         },
-                        'a' => {
+                        LEFT_KEY => {
                             if game.board_selection.1 >= INDICES_TO_MOVE {
                                 game.board_selection = (game.board_selection.0, game.board_selection.1 - INDICES_TO_MOVE);
                             }
                         },
-                        's' => {
-                            if game.board_selection.0 < TOTAL_PIECES - INDICES_TO_MOVE {
+                        DOWN_KEY => {
+                            if game.board_selection.0 < game.board.len() - INDICES_TO_MOVE {
                                 game.board_selection = (game.board_selection.0 + INDICES_TO_MOVE, game.board_selection.1);
                             }
                         },
-                        'd' => {
-                            if game.board_selection.1 < TOTAL_PIECES - INDICES_TO_MOVE {
+                        RIGHT_KEY => {
+                            if game.board_selection.1 < game.board.len() - INDICES_TO_MOVE {
                                 game.board_selection = (game.board_selection.0, game.board_selection.1 + INDICES_TO_MOVE);
                             }
                         },
