@@ -337,6 +337,19 @@ fn place_player_two_selected_piece(game: &mut Game) {
 }
 
 fn print_game(game: &Game) {
+    let mut player_one_show_selection = false;
+    let mut player_two_show_selection = false;
+    let mut board_show_selection = false;
+    match game.state {
+        State::PlayerOneSelectFirstPiece => player_one_show_selection = true,
+        State::PlayerOneConfirmFirstPiece => board_show_selection = true,
+        State::PlayerOneSelectPiece => player_one_show_selection = true,
+        State::PlayerOneSelectPieceLocation => board_show_selection = true,
+        State::PlayerOneConfirmPieceLocation => board_show_selection = true,
+        State::PlayerTwoSelectPiece => player_two_show_selection = true,
+        State::PlayerTwoSelectPieceLocation => board_show_selection = true,
+        State::PlayerTwoConfirmPieceLocation => board_show_selection = true,
+    };
     println!();
     println!();
     println!();
@@ -354,10 +367,10 @@ fn print_game(game: &Game) {
     println!();
     print_prompt(&game.state);
     println!();
-    print_hand(&game.player_one.hand, game.player_one.hand_selection);
-    print_hand(&game.player_two_hand, game.player_two_hand_selection);
+    print_hand(&game.player_one.hand, game.player_one.hand_selection, player_one_show_selection);
+    print_hand(&game.player_two_hand, game.player_two_hand_selection, player_two_show_selection);
     println!();
-    print_board(game.board, game.board_selection);
+    print_board(game.board, game.board_selection, board_show_selection);
 }
 
 ////////////////////////////////////////////////////////////////////////
@@ -413,20 +426,22 @@ fn clamp(min: i32, value: i32, max: i32) -> i32 {
     }
 }
 
-fn print_board(board: [[Piece; BOARD_SIZE]; BOARD_SIZE], selection: (usize, usize)) {
+fn print_board(board: [[Piece; BOARD_SIZE]; BOARD_SIZE], selection: (usize, usize), show_selection: bool) {
     for (i, row) in board.iter().enumerate() {
         for (j, piece) in row.iter().enumerate() {
-            let selected: bool = i == selection.0 && j == selection.1; 
+            let mut selected: bool = i == selection.0 && j == selection.1;
+            selected &= show_selection;
             print_piece(*piece, selected);
         }
         println!();
     }
 }
 
-fn print_hand(hand: &[Piece], selection: usize) {
+fn print_hand(hand: &[Piece], selection: usize, show_selection: bool) {
     print!("                                                  ");
     for (i, piece) in hand.iter().enumerate() {
-        let selected = i == selection;
+        let mut selected = i == selection;
+        selected &= show_selection;
         print_piece(*piece, selected);
     }
     println!();
