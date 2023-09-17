@@ -13,31 +13,33 @@ fn main() {
     let mut board_selection =  (TOTAL_PIECES / 2, TOTAL_PIECES / 2);
     
     let mut player_one_hand = create_hand(Player::One);
+    let mut player_one_hand_selection = 0;
     
     let mut player_two_hand = create_hand(Player::Two);
+    let mut player_two_hand_selection = 0;
+
+    let mut game = Game {
+        board,
+        board_selection,
+        player_one_hand,
+        player_one_hand_selection,
+        player_two_hand,
+        player_two_hand_selection,
+    };
     
-    print_board(board, board_selection);
-    print_hand(&player_one_hand);
-    print_hand(&player_two_hand);
-    
+    print_game(&game);
 
-    board[board_selection.0][board_selection.1] = player_one_hand.remove(0);
+    board[game.board_selection.0][game.board_selection.1] = game.player_one_hand.remove(0);
 
-    print_board(board, board_selection);
-    print_hand(&player_one_hand);
-    print_hand(&player_two_hand);
+    print_game(&game);
 
-    board_selection = (board_selection.0 + 2, board_selection.1);
+    game.board_selection = (game.board_selection.0 + 2, game.board_selection.1);
 
-    print_board(board, board_selection);
-    print_hand(&player_one_hand);
-    print_hand(&player_two_hand);
+    print_game(&game);
 
-    board[board_selection.0][board_selection.1] = player_two_hand.remove(0);
+    board[game.board_selection.0][game.board_selection.1] = game.player_two_hand.remove(0);
 
-    print_board(board, board_selection);
-    print_hand(&player_one_hand);
-    print_hand(&player_two_hand);
+    print_game(&game);
 
     let stdout = Term::buffered_stdout();
     const INDICES_TO_MOVE: usize = 2;
@@ -46,30 +48,28 @@ fn main() {
         if let Ok(character) = stdout.read_char() {
             match character {
                 'w' => {
-                    if board_selection.0 >= INDICES_TO_MOVE {
-                        board_selection = (board_selection.0 - INDICES_TO_MOVE, board_selection.1);
+                    if game.board_selection.0 >= INDICES_TO_MOVE {
+                        game.board_selection = (game.board_selection.0 - INDICES_TO_MOVE, game.board_selection.1);
                     }
                 },
                 'a' => {
-                    if board_selection.1 >= INDICES_TO_MOVE {
-                        board_selection = (board_selection.0, board_selection.1 - INDICES_TO_MOVE);
+                    if game.board_selection.1 >= INDICES_TO_MOVE {
+                        game.board_selection = (game.board_selection.0, game.board_selection.1 - INDICES_TO_MOVE);
                     }
                 },
                 's' => {
-                    if board_selection.0 < TOTAL_PIECES - INDICES_TO_MOVE {
-                        board_selection = (board_selection.0 + INDICES_TO_MOVE, board_selection.1);
+                    if game.board_selection.0 < TOTAL_PIECES - INDICES_TO_MOVE {
+                        game.board_selection = (game.board_selection.0 + INDICES_TO_MOVE, game.board_selection.1);
                     }
                 },
                 'd' => {
-                    if board_selection.1 < TOTAL_PIECES - INDICES_TO_MOVE {
-                        board_selection = (board_selection.0, board_selection.1 + INDICES_TO_MOVE);
+                    if game.board_selection.1 < TOTAL_PIECES - INDICES_TO_MOVE {
+                        game.board_selection = (game.board_selection.0, game.board_selection.1 + INDICES_TO_MOVE);
                     }
                 },
                 _ => break 'game_loop,
             }
-            print_board(board, board_selection);
-            print_hand(&player_one_hand);
-            print_hand(&player_two_hand);
+            print_game(&game);
         }
     }
     // print_board(board);
@@ -144,6 +144,24 @@ fn create_piece(bug: Bug, player: Player) -> Piece {
         bug,
         player,
     }
+}
+
+////////////////////////////////////////////////////////////////////////
+
+#[derive(Debug)]
+struct Game {
+    board: [[Piece; TOTAL_PIECES]; TOTAL_PIECES],
+    board_selection: (usize, usize),
+    player_one_hand: Vec<Piece>,
+    player_one_hand_selection: usize,
+    player_two_hand: Vec<Piece>,
+    player_two_hand_selection: usize,
+}
+
+fn print_game(game: &Game) {
+    print_board(game.board, game.board_selection);
+    print_hand(&game.player_one_hand);
+    print_hand(&game.player_two_hand);
 }
 
 ////////////////////////////////////////////////////////////////////////
