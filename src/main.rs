@@ -1,5 +1,7 @@
 use std::fmt;
 
+use console::Term;
+
 // const TOTAL_PIECES: usize = 28;
 const TOTAL_PIECES: usize = 22;
 
@@ -37,7 +39,39 @@ fn main() {
     print_hand(&player_one_hand);
     print_hand(&player_two_hand);
 
+    let stdout = Term::buffered_stdout();
+    const INDICES_TO_MOVE: usize = 2;
 
+    'game_loop: loop {
+        if let Ok(character) = stdout.read_char() {
+            match character {
+                'w' => {
+                    if selection.0 >= INDICES_TO_MOVE {
+                        selection = (selection.0 - INDICES_TO_MOVE, selection.1);
+                    }
+                },
+                'a' => {
+                    if selection.1 >= INDICES_TO_MOVE {
+                        selection = (selection.0, selection.1 - INDICES_TO_MOVE);
+                    }
+                },
+                's' => {
+                    if selection.0 < TOTAL_PIECES - INDICES_TO_MOVE {
+                        selection = (selection.0 + INDICES_TO_MOVE, selection.1);
+                    }
+                },
+                'd' => {
+                    if selection.1 < TOTAL_PIECES - INDICES_TO_MOVE {
+                        selection = (selection.0, selection.1 + INDICES_TO_MOVE);
+                    }
+                },
+                _ => break 'game_loop,
+            }
+            print_board(board, selection);
+            print_hand(&player_one_hand);
+            print_hand(&player_two_hand);
+        }
+    }
     // print_board(board);
 
 }
@@ -114,11 +148,23 @@ fn create_piece(bug: Bug, player: Player) -> Piece {
 
 ////////////////////////////////////////////////////////////////////////
 
+fn clamp(min: i32, value: i32, max: i32) -> i32 {
+    if value < min {
+        min
+    }
+    else if value > max {
+        max
+    }
+    else {
+        value
+    }
+}
+
 fn print_board(board: [[Piece; TOTAL_PIECES]; TOTAL_PIECES], selection: (usize, usize)) {
-    for i in 0..board.len() {
-        for j in 0..board[i].len() {
+    for (i, row) in board.iter().enumerate() {
+        for (j, piece) in row.iter().enumerate() {
             let selected: bool = i == selection.0 && j == selection.1; 
-            print_piece(board[i][j], selected);
+            print_piece(*piece, selected);
         }
         println!();
     }
