@@ -111,7 +111,22 @@ fn main() {
                     }
                 },
                 State::PlayerTwoSelectPiece => {
-                    
+                    match character {
+                        'a' => {
+                            if game.player_two_hand_selection > 0 {
+                                game.player_two_hand_selection -= 1;
+                            }
+                        },
+                        'd' => {
+                            if game.player_two_hand_selection < game.player_two_hand.len() - 1 {
+                                game.player_two_hand_selection += 1;
+                            }
+                        },
+                        ' ' => {
+                            game.state = State::PlayerTwoSelectPieceLocation;
+                        },
+                        _ => continue,
+                    }
                 },
                 State::PlayerTwoSelectPieceLocation => {
                     match character {
@@ -135,11 +150,25 @@ fn main() {
                                 game.board_selection = (game.board_selection.0, game.board_selection.1 + INDICES_TO_MOVE);
                             }
                         },
+                        ' ' => {
+                            game.state = State::PlayerTwoConfirmPieceLocation;
+                        },
+                        '\t' => {
+                            game.state = State::PlayerTwoSelectPiece;
+                        },
                         _ => continue,
                     }
                 },
                 State::PlayerTwoConfirmPieceLocation => {
-                    
+                    match character {
+                        ' ' => {
+                            game.state = State::PlayerOneSelectPiece;
+                        },
+                        '\t' => {
+                            game.state = State::PlayerTwoSelectPieceLocation;
+                        },
+                        _ => continue,
+                    }
                 },
             }
             print_game(&game);
