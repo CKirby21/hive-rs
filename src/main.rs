@@ -18,6 +18,8 @@ fn main() {
     let mut player_two_hand = create_hand(Player::Two);
     let mut player_two_hand_selection = 0;
 
+    let mut state = State::PlayerOneSelectPiece;
+
     let mut game = Game {
         board,
         board_selection,
@@ -25,19 +27,20 @@ fn main() {
         player_one_hand_selection,
         player_two_hand,
         player_two_hand_selection,
+        state,
     };
     
-    print_game(&game);
+    // print_game(&game);
 
-    board[game.board_selection.0][game.board_selection.1] = game.player_one_hand.remove(0);
+    // game.board[game.board_selection.0][game.board_selection.1] = game.player_one_hand.remove(0);
 
-    print_game(&game);
+    // print_game(&game);
 
-    game.board_selection = (game.board_selection.0 + 2, game.board_selection.1);
+    // game.board_selection = (game.board_selection.0 + 2, game.board_selection.1);
 
-    print_game(&game);
+    // print_game(&game);
 
-    board[game.board_selection.0][game.board_selection.1] = game.player_two_hand.remove(0);
+    // game.board[game.board_selection.0][game.board_selection.1] = game.player_two_hand.remove(0);
 
     print_game(&game);
 
@@ -46,34 +49,102 @@ fn main() {
 
     'game_loop: loop {
         if let Ok(character) = stdout.read_char() {
-            match character {
-                'w' => {
-                    if game.board_selection.0 >= INDICES_TO_MOVE {
-                        game.board_selection = (game.board_selection.0 - INDICES_TO_MOVE, game.board_selection.1);
+            match game.state {
+                State::PlayerOneSelectPiece => {
+                    match character {
+                        'a' => {
+                            if game.player_one_hand_selection > 0 {
+                                game.player_one_hand_selection -= 1;
+                            }
+                        },
+                        'd' => {
+                            if game.player_one_hand_selection < game.player_one_hand.len() - 1 {
+                                game.player_one_hand_selection += 1;
+                            }
+                        },
+                        ' ' => {
+                            game.state = State::PlayerOneSelectPieceLocation;
+                        },
+                        _ => continue,
                     }
                 },
-                'a' => {
-                    if game.board_selection.1 >= INDICES_TO_MOVE {
-                        game.board_selection = (game.board_selection.0, game.board_selection.1 - INDICES_TO_MOVE);
+                State::PlayerOneSelectPieceLocation => {
+                    match character {
+                        'w' => {
+                            if game.board_selection.0 >= INDICES_TO_MOVE {
+                                game.board_selection = (game.board_selection.0 - INDICES_TO_MOVE, game.board_selection.1);
+                            }
+                        },
+                        'a' => {
+                            if game.board_selection.1 >= INDICES_TO_MOVE {
+                                game.board_selection = (game.board_selection.0, game.board_selection.1 - INDICES_TO_MOVE);
+                            }
+                        },
+                        's' => {
+                            if game.board_selection.0 < TOTAL_PIECES - INDICES_TO_MOVE {
+                                game.board_selection = (game.board_selection.0 + INDICES_TO_MOVE, game.board_selection.1);
+                            }
+                        },
+                        'd' => {
+                            if game.board_selection.1 < TOTAL_PIECES - INDICES_TO_MOVE {
+                                game.board_selection = (game.board_selection.0, game.board_selection.1 + INDICES_TO_MOVE);
+                            }
+                        },
+                        ' ' => {
+                            game.state = State::PlayerOneConfirmPieceLocation;
+                        },
+                        '\t' => {
+                            game.state = State::PlayerOneSelectPiece;
+                        },
+                        _ => continue,
                     }
                 },
-                's' => {
-                    if game.board_selection.0 < TOTAL_PIECES - INDICES_TO_MOVE {
-                        game.board_selection = (game.board_selection.0 + INDICES_TO_MOVE, game.board_selection.1);
+                State::PlayerOneConfirmPieceLocation => {
+                    match character {
+                        ' ' => {
+                            game.state = State::PlayerTwoSelectPiece;
+                        },
+                        '\t' => {
+                            game.state = State::PlayerOneSelectPieceLocation;
+                        },
+                        _ => continue,
                     }
                 },
-                'd' => {
-                    if game.board_selection.1 < TOTAL_PIECES - INDICES_TO_MOVE {
-                        game.board_selection = (game.board_selection.0, game.board_selection.1 + INDICES_TO_MOVE);
+                State::PlayerTwoSelectPiece => {
+                    
+                },
+                State::PlayerTwoSelectPieceLocation => {
+                    match character {
+                        'w' => {
+                            if game.board_selection.0 >= INDICES_TO_MOVE {
+                                game.board_selection = (game.board_selection.0 - INDICES_TO_MOVE, game.board_selection.1);
+                            }
+                        },
+                        'a' => {
+                            if game.board_selection.1 >= INDICES_TO_MOVE {
+                                game.board_selection = (game.board_selection.0, game.board_selection.1 - INDICES_TO_MOVE);
+                            }
+                        },
+                        's' => {
+                            if game.board_selection.0 < TOTAL_PIECES - INDICES_TO_MOVE {
+                                game.board_selection = (game.board_selection.0 + INDICES_TO_MOVE, game.board_selection.1);
+                            }
+                        },
+                        'd' => {
+                            if game.board_selection.1 < TOTAL_PIECES - INDICES_TO_MOVE {
+                                game.board_selection = (game.board_selection.0, game.board_selection.1 + INDICES_TO_MOVE);
+                            }
+                        },
+                        _ => continue,
                     }
                 },
-                _ => break 'game_loop,
+                State::PlayerTwoConfirmPieceLocation => {
+                    
+                },
             }
             print_game(&game);
         }
     }
-    // print_board(board);
-
 }
 
 /////////////////////////////////////////////////////////////////////////
@@ -156,12 +227,40 @@ struct Game {
     player_one_hand_selection: usize,
     player_two_hand: Vec<Piece>,
     player_two_hand_selection: usize,
+    state: State,
 }
 
 fn print_game(game: &Game) {
     print_board(game.board, game.board_selection);
-    print_hand(&game.player_one_hand);
-    print_hand(&game.player_two_hand);
+    print_hand(&game.player_one_hand, game.player_one_hand_selection);
+    print_hand(&game.player_two_hand, game.player_two_hand_selection);
+    println!();
+    println!("{}", game.state);
+}
+
+////////////////////////////////////////////////////////////////////////
+
+#[derive(Debug, Copy, Clone)]
+enum State {
+    PlayerOneSelectPiece,
+    PlayerOneSelectPieceLocation,
+    PlayerOneConfirmPieceLocation,
+    PlayerTwoSelectPiece,
+    PlayerTwoSelectPieceLocation,
+    PlayerTwoConfirmPieceLocation
+}
+
+impl fmt::Display for State {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            State::PlayerOneSelectPiece => write!(f, "Select a piece Player 1"),
+            State::PlayerOneSelectPieceLocation => write!(f, "Choose where the piece shall go Player 1"),
+            State::PlayerOneConfirmPieceLocation => write!(f, "Are you sure about that Player 1?"),
+            State::PlayerTwoSelectPiece => write!(f, "Select a piece Player 2"),
+            State::PlayerTwoSelectPieceLocation => write!(f, "Choose where the piece shall go Player 2"),
+            State::PlayerTwoConfirmPieceLocation => write!(f, "Are you sure about that Player 2"),
+        }
+    }
 }
 
 ////////////////////////////////////////////////////////////////////////
@@ -189,9 +288,10 @@ fn print_board(board: [[Piece; TOTAL_PIECES]; TOTAL_PIECES], selection: (usize, 
     println!();
 }
 
-fn print_hand(hand: &Vec<Piece>) {
-    for piece in hand {
-        print_piece(*piece, false);
+fn print_hand(hand: &[Piece], selection: usize) {
+    for (i, piece) in hand.iter().enumerate() {
+        let selected = i == selection;
+        print_piece(*piece, selected);
     }
     println!();
 }
