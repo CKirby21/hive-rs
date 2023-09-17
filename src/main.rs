@@ -18,8 +18,11 @@ fn main() {
     let board: [[Piece; BOARD_SIZE]; BOARD_SIZE] = [[create_piece(Bug::None, PlayerNumber::None); BOARD_SIZE]; BOARD_SIZE];
     let board_selection =  (BOARD_SIZE / 2, BOARD_SIZE / 2);
     
-    let player_one_hand = create_hand(PlayerNumber::One);
-    let player_one_hand_selection = 0;
+    let player_one = Player {
+        number: PlayerNumber::One,
+        hand: create_hand(PlayerNumber::One),
+        hand_selection: 0,
+    };
     
     let player_two_hand = create_hand(PlayerNumber::Two);
     let player_two_hand_selection = 0;
@@ -29,8 +32,7 @@ fn main() {
     let mut game = Game {
         board,
         board_selection,
-        player_one_hand,
-        player_one_hand_selection,
+        player_one,
         player_two_hand,
         player_two_hand_selection,
         state,
@@ -46,10 +48,10 @@ fn main() {
                 State::PlayerOneSelectFirstPiece => {
                     match character {
                         LEFT_KEY => {
-                            move_left_in_player_one_hand(&mut game);
+                            move_left_in_player_hand(&mut game.player_one);
                         },
                         RIGHT_KEY => {
-                            move_right_in_player_one_hand(&mut game);
+                            move_right_in_player_hand(&mut game.player_one);
                         },
                         ADVANCE_KEY => {
                             game.state = State::PlayerOneConfirmFirstPiece;
@@ -62,12 +64,12 @@ fn main() {
                         ADVANCE_KEY => {
                             place_player_one_selected_piece(&mut game);
                             // TODO Handle when vector is size 0
-                            game.player_one_hand_selection = 0;
+                            game.player_one.hand_selection = 0;
                             // TODO Remember if queen has been played
                             game.state = State::PlayerTwoSelectPiece;
                         },
                         BACK_KEY => {
-                            game.state = State::PlayerTwoSelectPiece;
+                            game.state = State::PlayerOneSelectFirstPiece;
                         },
                         _ => continue,
                     }
@@ -75,10 +77,10 @@ fn main() {
                 State::PlayerOneSelectPiece => {
                     match character {
                         LEFT_KEY => {
-                            move_left_in_player_one_hand(&mut game);
+                            move_left_in_player_hand(&mut game.player_one);
                         },
                         RIGHT_KEY => {
-                            move_right_in_player_one_hand(&mut game);
+                            move_right_in_player_hand(&mut game.player_one);
                         },
                         ADVANCE_KEY => {
                             game.state = State::PlayerOneSelectPieceLocation;
@@ -114,7 +116,7 @@ fn main() {
                         ADVANCE_KEY => {
                             place_player_one_selected_piece(&mut game);
                             // TODO Handle when vector is size 0
-                            game.player_one_hand_selection = 0;
+                            game.player_one.hand_selection = 0;
                             // TODO Remember if queen has been played
                             game.state = State::PlayerTwoSelectPiece;
                         },
@@ -212,9 +214,11 @@ impl fmt::Display for Bug {
 
 /////////////////////////////////////////////////////////////////////////
 
+#[derive(Debug)]
 struct Player {
     number: PlayerNumber,
     hand: Vec<Piece>,
+    hand_selection: usize,
 }
 
 #[derive(Debug, Copy, Clone)]
@@ -270,8 +274,7 @@ fn create_piece(bug: Bug, player: PlayerNumber) -> Piece {
 struct Game {
     board: [[Piece; BOARD_SIZE]; BOARD_SIZE],
     board_selection: (usize, usize),
-    player_one_hand: Vec<Piece>,
-    player_one_hand_selection: usize,
+    player_one: Player,
     player_two_hand: Vec<Piece>,
     player_two_hand_selection: usize,
     state: State,
@@ -301,15 +304,15 @@ fn move_right_on_the_board(game: &mut Game) {
     }
 }
 
-fn move_left_in_player_one_hand(game: &mut Game) {
-    if game.player_one_hand_selection > 0 {
-        game.player_one_hand_selection -= 1;
+fn move_left_in_player_hand(player: &mut Player) {
+    if player.hand_selection > 0 {
+        player.hand_selection -= 1;
     }
 }
 
-fn move_right_in_player_one_hand(game: &mut Game) {
-    if game.player_one_hand_selection < game.player_one_hand.len() - 1 {
-        game.player_one_hand_selection += 1;
+fn move_right_in_player_hand(player: &mut Player) {
+    if player.hand_selection < player.hand.len() - 1 {
+        player.hand_selection += 1;
     }
 }
 
@@ -326,7 +329,7 @@ fn move_right_in_player_two_hand(game: &mut Game) {
 }
 
 fn place_player_one_selected_piece(game: &mut Game) {
-    game.board[game.board_selection.0][game.board_selection.1] = game.player_one_hand.remove(game.player_one_hand_selection);
+    game.board[game.board_selection.0][game.board_selection.1] = game.player_one.hand.remove(game.player_one.hand_selection);
 }
 
 fn place_player_two_selected_piece(game: &mut Game) {
@@ -351,7 +354,7 @@ fn print_game(game: &Game) {
     println!();
     print_prompt(&game.state);
     println!();
-    print_hand(&game.player_one_hand, game.player_one_hand_selection);
+    print_hand(&game.player_one.hand, game.player_one.hand_selection);
     print_hand(&game.player_two_hand, game.player_two_hand_selection);
     println!();
     print_board(game.board, game.board_selection);
