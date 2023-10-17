@@ -486,12 +486,12 @@ fn get_placeable_location_vec(board: &[[Piece; BOARD_SIZE]; BOARD_SIZE], player:
             }
 
             let neighboring_piece_vec = vec![
-                board[i - 2][j].player,
-                board[i - 1][j + 1].player,
-                board[i + 1][j + 2].player,
-                board[i + 2][j].player,
-                board[i + 1][j - 1].player,
-                board[i - 1][j - 1].player,
+                board[i - 2][j].player,     // North
+                board[i - 1][j - 1].player, // Northwest
+                board[i - 1][j + 1].player, // Northeast
+                board[i + 2][j].player,     // South
+                board[i + 1][j - 1].player, // Southwest
+                board[i + 1][j + 1].player, // Southeast
             ];
 
             let mut neighboring_piece_from_another_player = false;
