@@ -15,174 +15,64 @@ const RIGHT_KEY: char = 'd';
 /////////////////////////////////////////////////////////////////////////
 
 fn main() {
-    // TODO make this a 3d array
-    let board: [[Piece; BOARD_SIZE]; BOARD_SIZE] = [[create_piece(Bug::None, PlayerNumber::None); BOARD_SIZE]; BOARD_SIZE];
-    let placeable_location_vec =  vec![(BOARD_SIZE / 2, BOARD_SIZE / 2)];
-    let placeable_location_selection = 0;
-    let board_selection = placeable_location_vec[placeable_location_selection];
-    let player_one = Player::new(PlayerNumber::One);
-    let player_two = Player::new(PlayerNumber::Two);
-    let state = State::PlayerOneSelectPiece;
-    let old_piece_location = (0, 0); // FIXME I dont like this variable
 
-    let mut game = Game {
-        board,
-        board_selection,
-        player_one,
-        player_two,
-        state,
-        old_piece_location,
-        placeable_location_vec,
-        placeable_location_selection,
-    };
-    
-    print_game(&game);
+    let mut game = Game::new();
+    game.print();
 
     let stdout = Term::buffered_stdout();
 
     'game_loop: loop {
-        print_game(&game);
         if let Ok(character) = stdout.read_char() {
+            game.find_placeable_locations();
             match game.state {
-                State::PlayerOneSelectPiece => {
-                    assert!(!game.player_one.hand.is_empty());
+                State::SelectPieceInHand => {
+                    assert!(!game.player_with_turn.hand.is_empty());
                     match character {
                         LEFT_KEY => {
-                            game.player_one.move_left_in_hand();
+                            game.player_with_turn.move_left_in_hand();
                         },
                         RIGHT_KEY => {
-                            game.player_one.move_right_in_hand();
+                            game.player_with_turn.move_right_in_hand();
                         },
                         ADVANCE_KEY => {
-                            game.state = State::PlayerOneSelectPlacingLocation;
+                            game.state = State::SelectPlacingLocation;
+                            game.board_selection = game.placeable_location_vec[0]
                         },
                         _ => continue,
                     }
                 },
-                State::PlayerOneSelectPlacingLocation => {
+                State::SelectPlacingLocation => {
                     match character {
                         LEFT_KEY => {
-                            move_left_on_the_board(&mut game);
+                            game.move_placeable_location_cursor(MoveDirection::Previous);
                         },
                         RIGHT_KEY => {
-                            move_right_on_the_board(&mut game);
+                            game.move_placeable_location_cursor(MoveDirection::Next);
                         },
                         ADVANCE_KEY => {
-                            game.state = State::PlayerOneConfirmPlacingLocation;
+                            game.state = State::ConfirmPlacingLocation;
                         },
                         BACK_KEY => {
-                            game.state = State::PlayerOneSelectPiece;
+                            game.state = State::SelectPieceInHand;
                         },
                         _ => continue,
                     }
                 },
-                State::PlayerOneConfirmPlacingLocation => {
+                State::ConfirmPlacingLocation => {
                     match character {
                         ADVANCE_KEY => {
-                            place_player_one_selected_piece(&mut game);
-                            // TODO Handle when vector is size 0
-                            game.player_one.hand_selection = 0;
-                            // TODO Remember if queen has been played
-                            game.state = State::PlayerTwoSelectPiece;
+                            game.place_selected_piece();
+                            game.advance_turn();
+                            game.state = State::SelectPieceInHand;
                         },
                         BACK_KEY => {
-                            game.state = State::PlayerOneSelectPlacingLocation;
-                        },
-                        _ => continue,
-                    }
-                },
-                State::PlayerOneSelectPieceOnBoard => {
-                    match character {
-                        LEFT_KEY => {
-                            move_left_on_the_board(&mut game);
-                        },
-                        RIGHT_KEY => {
-                            move_right_on_the_board(&mut game);
-                        },
-                        ADVANCE_KEY => {
-                            game.old_piece_location = game.board_selection;
-                            game.state = State::PlayerOneSelectMovingLocation;
-                        },
-                        _ => continue,
-                    }
-                },
-                State::PlayerOneSelectMovingLocation => {
-                    match character {
-                        LEFT_KEY => {
-                            move_left_on_the_board(&mut game);
-                        },
-                        RIGHT_KEY => {
-                            move_right_on_the_board(&mut game);
-                        },
-                        ADVANCE_KEY => {
-                            game.state = State::PlayerOneConfirmMovingLocation;
-                        },
-                        BACK_KEY => {
-                            game.state = State::PlayerOneSelectPieceOnBoard;
-                        },
-                        _ => continue,
-                    }
-                },
-                State::PlayerOneConfirmMovingLocation => {
-                    match character {
-                        ADVANCE_KEY => {
-                            move_piece(&mut game);
-                            game.state = State::PlayerOneSelectPiece;
-                        },
-                        BACK_KEY => {
-                            game.state = State::PlayerOneSelectMovingLocation;
-                        },
-                        _ => continue,
-                    }
-                },
-                State::PlayerTwoSelectPiece => {
-                    assert!(!game.player_two.hand.is_empty());
-                    match character {
-                        LEFT_KEY => {
-                            game.player_two.move_left_in_hand();
-                        },
-                        RIGHT_KEY => {
-                            game.player_two.move_right_in_hand();
-                        },
-                        ADVANCE_KEY => {
-                            game.state = State::PlayerTwoSelectPlacingLocation;
-                        },
-                        _ => continue,
-                    }
-                },
-                State::PlayerTwoSelectPlacingLocation => {
-                    match character {
-                        LEFT_KEY => {
-                            move_left_on_the_board(&mut game);
-                        },
-                        RIGHT_KEY => {
-                            move_right_on_the_board(&mut game);
-                        },
-                        ADVANCE_KEY => {
-                            game.state = State::PlayerTwoConfirmPlacingLocation;
-                        },
-                        BACK_KEY => {
-                            game.state = State::PlayerTwoSelectPiece;
-                        },
-                        _ => continue,
-                    }
-                },
-                State::PlayerTwoConfirmPlacingLocation => {
-                    match character {
-                        ADVANCE_KEY => {
-                            place_player_two_selected_piece(&mut game);
-                            // TODO Handle when vector is size 0
-                            game.player_two.hand_selection = 0;
-                            // TODO Remember if queen has been played for player two
-                            game.state = State::PlayerOneSelectPiece;
-                        },
-                        BACK_KEY => {
-                            game.state = State::PlayerTwoSelectPlacingLocation;
+                            game.state = State::SelectPlacingLocation;
                         },
                         _ => continue,
                     }
                 },
             }
+            game.print();
         }
     }
 }
@@ -224,7 +114,19 @@ enum PlayerNumber {
     Two,
 }
 
-#[derive(Debug)]
+impl fmt::Display for PlayerNumber {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            PlayerNumber::None => write!(f, " "),
+            PlayerNumber::One => write!(f, "1"),
+            PlayerNumber::Two => write!(f, "2"),
+        }
+    }
+}
+
+/////////////////////////////////////////////////////////////////////////
+
+#[derive(Debug, Clone)]
 struct Player {
     number: PlayerNumber,
     hand: Vec<Piece>,
@@ -252,15 +154,6 @@ impl Player {
     }
 }
 
-impl fmt::Display for PlayerNumber {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match self {
-            PlayerNumber::None => write!(f, "-"),
-            PlayerNumber::One => write!(f, "1"),
-            PlayerNumber::Two => write!(f, "2"),
-        }
-    }
-}
 
 /////////////////////////////////////////////////////////////////////////
 
@@ -293,134 +186,211 @@ fn create_piece(bug: Bug, player: PlayerNumber) -> Piece {
 }
 
 ////////////////////////////////////////////////////////////////////////
+enum MoveDirection {
+    Next,
+    Previous,
+}
 
 #[derive(Debug)]
 struct Game {
     board: [[Piece; BOARD_SIZE]; BOARD_SIZE],
     board_selection: (usize, usize),
-    player_one: Player,
-    player_two: Player,
+    player_with_turn: Player,
+    player_without_turn: Player,
     state: State,
     old_piece_location: (usize, usize), // FIXME move somewhere else
-    placeable_location_vec: Vec<(usize, usize)>, // FIXME move somewhere else
-    placeable_location_selection: usize, // FIXME
+    placeable_location_selection: usize,
+    placeable_location_vec: Vec<(usize, usize)>,
 }
 
-fn move_left_on_the_board(game: &mut Game) {
-    game.placeable_location_vec = get_placeable_location_vec(&game.board, &game.player_one);
-    // TODO Handle when player has nowhere to place
-    assert!(!game.placeable_location_vec.is_empty());
-    // FIXME update board selection better
-    game.board_selection = game.placeable_location_vec[game.placeable_location_selection];
-
-    if game.placeable_location_selection >= 1 {
-        game.placeable_location_selection -= 1;
+impl Game {
+    
+    fn new() -> Self {
+        // TODO make this a 3d array
+        let board: [[Piece; BOARD_SIZE]; BOARD_SIZE] = [[create_piece(Bug::None, PlayerNumber::None); BOARD_SIZE]; BOARD_SIZE];
+        let player_with_turn = Player::new(PlayerNumber::One);
+        let player_without_turn = Player::new(PlayerNumber::Two);
+        let board_selection = FIRST_LOCATION;
+        let state = State::SelectPieceInHand;
+        let old_piece_location = (0, 0); // FIXME I dont like this variable
+        let placeable_location_selection: usize = 0;
+        let placeable_location_vec = vec![(BOARD_SIZE / 2, BOARD_SIZE / 2)];
+        
+        Game {
+            board,
+            board_selection,
+            player_with_turn,
+            player_without_turn,
+            state,
+            old_piece_location,
+            placeable_location_selection,
+            placeable_location_vec,
+        }
     }
-}
 
-fn move_right_on_the_board(game: &mut Game) {
-    game.placeable_location_vec = get_placeable_location_vec(&game.board, &game.player_one);
-    // TODO Handle when player has nowhere to place
-    assert!(!game.placeable_location_vec.is_empty());
-    // FIXME update board selection better
-    game.board_selection = game.placeable_location_vec[game.placeable_location_selection];
+    fn move_placeable_location_cursor(&mut self, move_direction: MoveDirection) {
 
-    if game.placeable_location_selection < game.placeable_location_vec.len() - 1 {
-        game.placeable_location_selection += 1;
+        // TODO Handle when player has nowhere to place
+        assert!(!self.placeable_location_vec.is_empty());
+        
+        match move_direction {
+            MoveDirection::Next => {
+                if self.placeable_location_selection >= self.placeable_location_vec.len() - 1 {
+                    self.placeable_location_selection = 0;
+                }
+                else {
+                    self.placeable_location_selection += 1;
+                }
+            }
+            MoveDirection::Previous => {
+                if self.placeable_location_selection == 0 {
+                    self.placeable_location_selection = self.placeable_location_vec.len() - 1
+                }
+                else {
+                    self.placeable_location_selection -= 1;
+                }
+            }
+        }
+    
+        // FIXME update board selection better
+        self.board_selection = self.placeable_location_vec[self.placeable_location_selection];
     }
-}
 
-fn place_player_one_selected_piece(game: &mut Game) {
-    game.board[game.board_selection.0][game.board_selection.1] = game.player_one.hand.remove(game.player_one.hand_selection);
-}
+    // Not sure I like this function
+    fn place_selected_piece(&mut self) {
+        self.board[self.board_selection.0][self.board_selection.1] = self.player_with_turn.hand.remove(self.player_with_turn.hand_selection);
+        self.player_with_turn.hand_selection = 0;
+        // TODO Remember if queen has been played
+    }
 
-fn place_player_two_selected_piece(game: &mut Game) {
-    game.board[game.board_selection.0][game.board_selection.1] = game.player_two.hand.remove(game.player_one.hand_selection);
-}
+    fn advance_turn(&mut self) {
+        let temp_player = self.player_with_turn.clone();
+        self.player_with_turn = self.player_without_turn.clone();
+        self.player_without_turn = temp_player;
+    }
 
-fn move_piece(game: &mut Game) {
-    // TODO Check that the selection can be moved to by the piece
-    game.board[game.board_selection.0][game.board_selection.1] = game.board[game.old_piece_location.0][game.old_piece_location.1];
-    game.board[game.old_piece_location.0][game.old_piece_location.1] = create_piece(Bug::None, PlayerNumber::None);
-}
+    fn find_placeable_locations(&mut self) {
 
-fn print_game(game: &Game) {
-    let mut player_one_show_selection = false;
-    let mut player_two_show_selection = false;
-    let mut board_show_selection = false;
-    match game.state {
-        State::PlayerOneSelectPiece => player_one_show_selection = true,
-        State::PlayerOneSelectPlacingLocation => board_show_selection = true,
-        State::PlayerOneConfirmPlacingLocation => board_show_selection = true,
-        State::PlayerOneSelectPieceOnBoard => board_show_selection = true,
-        State::PlayerOneSelectMovingLocation => board_show_selection = true,
-        State::PlayerOneConfirmMovingLocation => board_show_selection = true,
-        State::PlayerTwoSelectPiece => player_two_show_selection = true,
-        State::PlayerTwoSelectPlacingLocation => board_show_selection = true,
-        State::PlayerTwoConfirmPlacingLocation => board_show_selection = true,
-    };
-    println!();
-    println!();
-    println!();
-    println!();
-    println!();
-    println!();
-    println!();
-    println!();
-    println!();
-    println!();
-    println!();
-    println!();
-    println!();
-    println!();
-    println!();
-    print_prompt(&game.state);
-    println!();
-    print_hand(&game.player_one.hand, game.player_one.hand_selection, player_one_show_selection);
-    print_hand(&game.player_two.hand, game.player_two.hand_selection, player_two_show_selection);
-    println!();
-    print_board(game.board, game.board_selection, board_show_selection);
+        let mut placeable_location_vec: Vec<(usize, usize)> = vec![];
+    
+        let mut locations_occupied = 0;
+    
+        for (i, row) in self.board.iter().enumerate() {
+            for (j, _piece) in row.iter().enumerate() {
+                // FIXME Ignores the indexes in the corners of the board
+                if i < 2 || self.board.len() - 2 <= i || j < 2 || self.board.len() - 2 <= j {
+                    continue;
+                }
+    
+                let current_location_occupied = self.board[i][j].player != PlayerNumber::None;
+                if current_location_occupied {
+                    locations_occupied += 1;
+                    continue;
+                }
+    
+                let neighboring_piece_vec = vec![
+                    self.board[i - 2][j].player,     // North
+                    self.board[i - 1][j - 1].player, // Northwest
+                    self.board[i - 1][j + 1].player, // Northeast
+                    self.board[i + 2][j].player,     // South
+                    self.board[i + 1][j - 1].player, // Southwest
+                    self.board[i + 1][j + 1].player, // Southeast
+                ];
+    
+                let mut neighboring_piece_from_another_player = false;
+                let mut neighboring_piece_from_same_player = false;
+                for neighbor in neighboring_piece_vec {
+                    if neighbor == self.player_with_turn.number {
+                        neighboring_piece_from_same_player = true;
+                    }
+                    else if neighbor == PlayerNumber::None {
+                        // Do nothing
+                    }
+                    else {
+                        neighboring_piece_from_another_player = true;
+                    }
+                }
+    
+                if neighboring_piece_from_another_player {
+                    continue;
+                }
+                if !neighboring_piece_from_same_player {
+                    continue;
+                }
+    
+                placeable_location_vec.push((i, j));
+            }
+        }
+    
+        // Handles the first turn for each player where they have no existing
+        // pieces to play off of
+        if locations_occupied <= 1 {
+            if self.player_with_turn.number == PlayerNumber::One {
+                placeable_location_vec.push(FIRST_LOCATION);
+            }
+            else if self.player_with_turn.number == PlayerNumber::Two {
+                placeable_location_vec.push((FIRST_LOCATION.0 - 2, FIRST_LOCATION.1));     // North
+                placeable_location_vec.push((FIRST_LOCATION.0 - 1, FIRST_LOCATION.1 - 1)); // Northwest
+                placeable_location_vec.push((FIRST_LOCATION.0 - 1, FIRST_LOCATION.1 + 1)); // Northeast
+                placeable_location_vec.push((FIRST_LOCATION.0 + 2, FIRST_LOCATION.1));     // South
+                placeable_location_vec.push((FIRST_LOCATION.0 + 1, FIRST_LOCATION.1 - 1)); // Southwest
+                placeable_location_vec.push((FIRST_LOCATION.0 + 1, FIRST_LOCATION.1 + 1)); // Southeast
+            } else {
+                panic!();
+            }
+        }
+        self.placeable_location_vec = placeable_location_vec;
+    }
+    
+    fn print(&mut self) {
+        let mut board_show_selection = false;
+        if self.state == State::SelectPlacingLocation || self.state == State::ConfirmPlacingLocation {
+            board_show_selection = true;
+        }
+        println!();
+        println!();
+        println!();
+        println!();
+        println!();
+        println!();
+        println!();
+        println!();
+        println!();
+        println!();
+        println!();
+        println!();
+        println!();
+        println!();
+        println!();
+        print_prompt(&self.state, self.player_with_turn.number);
+        println!();
+        print_hand(&self.player_with_turn.hand, self.player_with_turn.hand_selection, true);
+        print_hand(&self.player_without_turn.hand, self.player_without_turn.hand_selection, false);
+        println!();
+        print_board(self.board, self.board_selection, board_show_selection);
+    }
 }
 
 ////////////////////////////////////////////////////////////////////////
 
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, PartialEq)]
 enum State {
-    PlayerOneSelectPiece,
-    PlayerOneSelectPlacingLocation,
-    PlayerOneConfirmPlacingLocation,
-    PlayerOneSelectPieceOnBoard,
-    PlayerOneSelectMovingLocation,
-    PlayerOneConfirmMovingLocation,
-    PlayerTwoSelectPiece,
-    PlayerTwoSelectPlacingLocation,
-    PlayerTwoConfirmPlacingLocation,
+    // DecideToPlaceOrMove,
+    SelectPieceInHand,
+    SelectPlacingLocation,
+    ConfirmPlacingLocation,
+    // SelectPieceOnBoard,
+    // SelectMovingLocation,
+    // ConfirmMovingLocation,
 }
 
-fn print_prompt(state: &State) {
+fn print_prompt(state: &State, player_turn: PlayerNumber) {
     let prompt_string = match state {
-        State::PlayerOneSelectPiece => "Player 1: Select a bug",
-        State::PlayerOneSelectPlacingLocation => "Player 1: Choose a location",
-        State::PlayerOneConfirmPlacingLocation => "Player 1: Are you quite sure about that?",
-        State::PlayerOneSelectPieceOnBoard => "Player 1: Select a bug",
-        State::PlayerOneSelectMovingLocation => "Player 1: Choose a location",
-        State::PlayerOneConfirmMovingLocation => "Player 1: Are you quite sure about that?",
-        State::PlayerTwoSelectPiece => "Player 2: Select a bug",
-        State::PlayerTwoSelectPlacingLocation => "Player 2: Choose a location",
-        State::PlayerTwoConfirmPlacingLocation => "Player 2: Are you quite sure about that?",
+        State::SelectPieceInHand => format!("Player {}: Select a bug", player_turn),
+        State::SelectPlacingLocation => format!("Player {}: Choose a location", player_turn),
+        State::ConfirmPlacingLocation => format!("Player {}: Are you quite sure about that?", player_turn),
     };
-    let player_ones_turn = match state {
-        State::PlayerOneSelectPiece => true,
-        State::PlayerOneSelectPlacingLocation => true,
-        State::PlayerOneConfirmPlacingLocation => true,
-        State::PlayerOneSelectPieceOnBoard => true,
-        State::PlayerOneSelectMovingLocation => true,
-        State::PlayerOneConfirmMovingLocation => true,
-        State::PlayerTwoSelectPiece => false,
-        State::PlayerTwoSelectPlacingLocation => false,
-        State::PlayerTwoConfirmPlacingLocation => false,
-    };
-    let prompt_string_colored = if player_ones_turn { prompt_string.blue() } else { prompt_string.red() };
+    let prompt_string_colored = if player_turn == PlayerNumber::One { prompt_string.blue() } else { prompt_string.red() };
     println!("                                                  {}", prompt_string_colored);
 }
 
@@ -474,68 +444,4 @@ fn create_hand(player: PlayerNumber) -> Vec<Piece> {
         create_piece(Bug::Beetle, player),
     ];
     hand
-}
-
-fn get_placeable_location_vec(board: &[[Piece; BOARD_SIZE]; BOARD_SIZE], player: &Player) -> Vec<(usize, usize)> {
-    let mut placeable_location_vec: Vec<(usize, usize)> = vec![];
-    for (i, row) in board.iter().enumerate() {
-        for (j, _piece) in row.iter().enumerate() {
-            // FIXME Ignores the indexes in the corners of the board
-            if i < 2 || board.len() - 2 <= i || j < 2 || board.len() - 2 <= j {
-                continue;
-            }
-
-            let neighboring_piece_vec = vec![
-                board[i - 2][j].player,     // North
-                board[i - 1][j - 1].player, // Northwest
-                board[i - 1][j + 1].player, // Northeast
-                board[i + 2][j].player,     // South
-                board[i + 1][j - 1].player, // Southwest
-                board[i + 1][j + 1].player, // Southeast
-            ];
-
-            let mut neighboring_piece_from_another_player = false;
-            let mut neighboring_piece_from_same_player = false;
-            for neighbor in neighboring_piece_vec {
-                if neighbor == player.number {
-                    neighboring_piece_from_same_player = true;
-                }
-                else if neighbor == PlayerNumber::None {
-                    // Do nothing
-                }
-                else {
-                    neighboring_piece_from_another_player = true;
-                }
-            }
-
-            if neighboring_piece_from_another_player {
-                continue;
-            }
-            if !neighboring_piece_from_same_player {
-                continue;
-            }
-
-            placeable_location_vec.push((i, j));
-        }
-    }
-
-    // FIXME Handles the first turn for each player where they have no existing
-    // pieces to play off of
-    if player.hand.len() == 11 && placeable_location_vec.is_empty() {
-        if player.number == PlayerNumber::One {
-            placeable_location_vec.push(FIRST_LOCATION);
-        }
-        else if player.number == PlayerNumber::Two {
-            placeable_location_vec.push((FIRST_LOCATION.0 - 2, FIRST_LOCATION.1));
-            placeable_location_vec.push((FIRST_LOCATION.0 - 1, FIRST_LOCATION.1 + 1));
-            placeable_location_vec.push((FIRST_LOCATION.0 + 1, FIRST_LOCATION.1 + 2));
-            placeable_location_vec.push((FIRST_LOCATION.0 + 2, FIRST_LOCATION.1));
-            placeable_location_vec.push((FIRST_LOCATION.0 + 1, FIRST_LOCATION.1 - 1));
-            placeable_location_vec.push((FIRST_LOCATION.0 - 1, FIRST_LOCATION.1 - 1));
-        } else {
-            panic!();
-        }
-    }
-    println!("{:?}", placeable_location_vec);
-    placeable_location_vec
 }
