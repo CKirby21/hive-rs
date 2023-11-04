@@ -7,9 +7,9 @@ const BOARD_SIZE: usize = 35;
 const FIRST_LOCATION: (usize, usize) = (BOARD_SIZE / 2, BOARD_SIZE / 2);
 const ADVANCE_KEY: char = 'e';
 const BACK_KEY: char = 'q';
-const UP_KEY: char = 'w';
+// const UP_KEY: char = 'w';
 const LEFT_KEY: char = 'a';
-const DOWN_KEY: char = 's';
+// const DOWN_KEY: char = 's';
 const RIGHT_KEY: char = 'd';
 
 /////////////////////////////////////////////////////////////////////////
@@ -23,16 +23,17 @@ fn main() {
 
     'game_loop: loop {
         if let Ok(character) = stdout.read_char() {
+            game.find_piece_locations();
             game.find_placeable_locations();
             match game.state {
-                State::SelectPieceInHand => {
+                State::SelectPiece => {
                     assert!(!game.player_with_turn.hand.is_empty());
                     match character {
                         LEFT_KEY => {
-                            game.player_with_turn.move_left_in_hand();
+                            game.move_piece_cursor(MoveDirection::Previous);
                         },
                         RIGHT_KEY => {
-                            game.player_with_turn.move_right_in_hand();
+                            game.move_piece_cursor(MoveDirection::Next);
                         },
                         ADVANCE_KEY => {
                             game.state = State::SelectPlacingLocation;
@@ -53,7 +54,7 @@ fn main() {
                             game.state = State::ConfirmPlacingLocation;
                         },
                         BACK_KEY => {
-                            game.state = State::SelectPieceInHand;
+                            game.state = State::SelectPiece;
                         },
                         _ => continue,
                     }
@@ -63,7 +64,7 @@ fn main() {
                         ADVANCE_KEY => {
                             game.place_selected_piece();
                             game.advance_turn();
-                            game.state = State::SelectPieceInHand;
+                            game.state = State::SelectPiece;
                         },
                         BACK_KEY => {
                             game.state = State::SelectPlacingLocation;
@@ -130,7 +131,6 @@ impl fmt::Display for PlayerNumber {
 struct Player {
     number: PlayerNumber,
     hand: Vec<Piece>,
-    hand_selection: usize,
 }
 
 impl Player {
@@ -138,19 +138,33 @@ impl Player {
         Player {
             number,
             hand: create_hand(number),
-            hand_selection: 0,
         }
     }
 
-    fn move_left_in_hand(&mut self) {
-        if self.hand_selection > 0 {
-            self.hand_selection -= 1;
+    fn get_hand_selection_vec(&self) -> Vec<Selection>{
+        
+        let mut hand_selection_vec: Vec<Selection> = vec![];
+
+        for (i, _piece) in self.hand.iter().enumerate() {
+            hand_selection_vec.push(
+                Selection {
+                    location: Location::Hand,
+                    row: 0,
+                    col: i
+                }
+            )
         }
+        hand_selection_vec
     }
-    fn move_right_in_hand(&mut self) {
-        if self.hand_selection < self.hand.len() - 1 {
-            self.hand_selection += 1;
+
+    fn print_hand(&self, selection: usize, show_selection: bool) {
+        print!("                                                  ");
+        for (i, piece) in self.hand.iter().enumerate() {
+            let mut selected = i == selection;
+            selected &= show_selection;
+            print_piece(*piece, selected);
         }
+        println!();
     }
 }
 
@@ -186,6 +200,21 @@ fn create_piece(bug: Bug, player: PlayerNumber) -> Piece {
 }
 
 ////////////////////////////////////////////////////////////////////////
+
+#[derive(Debug, Copy, Clone, PartialEq)]
+enum Location {
+    Board,
+    Hand
+}
+
+#[derive(Debug, Copy, Clone)]
+struct Selection {
+    location: Location,
+    row: usize,
+    col: usize,
+}
+
+////////////////////////////////////////////////////////////////////////
 enum MoveDirection {
     Next,
     Previous,
@@ -198,9 +227,10 @@ struct Game {
     player_with_turn: Player,
     player_without_turn: Player,
     state: State,
-    old_piece_location: (usize, usize), // FIXME move somewhere else
     placeable_location_selection: usize,
     placeable_location_vec: Vec<(usize, usize)>,
+    piece_selection_vec_index: usize,
+    piece_selection_vec: Vec<Selection>,
 }
 
 impl Game {
@@ -211,10 +241,11 @@ impl Game {
         let player_with_turn = Player::new(PlayerNumber::One);
         let player_without_turn = Player::new(PlayerNumber::Two);
         let board_selection = FIRST_LOCATION;
-        let state = State::SelectPieceInHand;
-        let old_piece_location = (0, 0); // FIXME I dont like this variable
+        let state = State::SelectPiece;
         let placeable_location_selection: usize = 0;
         let placeable_location_vec = vec![(BOARD_SIZE / 2, BOARD_SIZE / 2)];
+        let piece_selection_vec_index: usize = 0;
+        let piece_selection_vec = vec![Selection{location: Location::Hand, row: 0, col: 0}];
         
         Game {
             board,
@@ -222,9 +253,36 @@ impl Game {
             player_with_turn,
             player_without_turn,
             state,
-            old_piece_location,
             placeable_location_selection,
             placeable_location_vec,
+            piece_selection_vec_index,
+            piece_selection_vec
+        }
+    }
+
+    fn get_piece_selection(&self) -> Selection {
+        self.piece_selection_vec[self.piece_selection_vec_index]
+    }
+
+    fn move_piece_cursor(&mut self, move_direction: MoveDirection) {
+        
+        match move_direction {
+            MoveDirection::Next => {
+                if self.piece_selection_vec_index >= self.piece_selection_vec.len() - 1 {
+                    self.piece_selection_vec_index = 0;
+                }
+                else {
+                    self.piece_selection_vec_index += 1;
+                }
+            }
+            MoveDirection::Previous => {
+                if self.piece_selection_vec_index == 0 {
+                    self.piece_selection_vec_index = self.piece_selection_vec.len() - 1
+                }
+                else {
+                    self.piece_selection_vec_index -= 1;
+                }
+            }
         }
     }
 
@@ -258,15 +316,43 @@ impl Game {
 
     // Not sure I like this function
     fn place_selected_piece(&mut self) {
-        self.board[self.board_selection.0][self.board_selection.1] = self.player_with_turn.hand.remove(self.player_with_turn.hand_selection);
-        self.player_with_turn.hand_selection = 0;
-        // TODO Remember if queen has been played
+
+        let selection = self.get_piece_selection();
+        let piece_to_place = match selection.location {
+            Location::Board => self.board[selection.row][selection.col],
+            Location::Hand => self.player_with_turn.hand.remove(selection.col)
+        };
+        self.board[self.board_selection.0][self.board_selection.1] = piece_to_place;
+        self.piece_selection_vec_index = 0;
     }
 
     fn advance_turn(&mut self) {
         let temp_player = self.player_with_turn.clone();
         self.player_with_turn = self.player_without_turn.clone();
         self.player_without_turn = temp_player;
+    }
+
+    fn find_piece_locations(&mut self) {
+        
+        let mut piece_selection_vec = self.player_with_turn.get_hand_selection_vec();
+        let mut board_selection_vec = vec![];
+
+        for (i, row) in self.board.iter().enumerate() {
+            for (j, piece) in row.iter().enumerate() {
+                
+                if piece.player == self.player_with_turn.number {
+                    board_selection_vec.push(
+                        Selection {
+                            location: Location::Board,
+                            row: i,
+                            col: j
+                        }
+                    );
+                }
+            }
+        }
+        piece_selection_vec.extend(board_selection_vec);
+        self.piece_selection_vec = piece_selection_vec;
     }
 
     fn find_placeable_locations(&mut self) {
@@ -341,12 +427,25 @@ impl Game {
         }
         self.placeable_location_vec = placeable_location_vec;
     }
+
+    fn print_board(&self) {
+        for (i, row) in self.board.iter().enumerate() {
+            for (j, piece) in row.iter().enumerate() {
+                let location_selected = i == self.board_selection.0 && j == self.board_selection.1;
+                let mut piece_selected = i == self.get_piece_selection().row && j == self.get_piece_selection().col;
+                piece_selected &= self.get_piece_selection().location == Location::Board;
+                match self.state {
+                    State::SelectPiece => print_piece(*piece, piece_selected),
+                    State::SelectPlacingLocation => print_piece(*piece, location_selected),
+                    State::ConfirmPlacingLocation => print_piece(*piece, location_selected),
+                    _ => print_piece(*piece, false),
+                }
+            }
+            println!();
+        }
+    }
     
     fn print(&mut self) {
-        let mut board_show_selection = false;
-        if self.state == State::SelectPlacingLocation || self.state == State::ConfirmPlacingLocation {
-            board_show_selection = true;
-        }
         println!();
         println!();
         println!();
@@ -364,10 +463,10 @@ impl Game {
         println!();
         print_prompt(&self.state, self.player_with_turn.number);
         println!();
-        print_hand(&self.player_with_turn.hand, self.player_with_turn.hand_selection, true);
-        print_hand(&self.player_without_turn.hand, self.player_without_turn.hand_selection, false);
+        self.player_with_turn.print_hand(self.get_piece_selection().col, true);
+        self.player_without_turn.print_hand(self.get_piece_selection().col, false);
         println!();
-        print_board(self.board, self.board_selection, board_show_selection);
+        self.print_board();
     }
 }
 
@@ -376,7 +475,7 @@ impl Game {
 #[derive(Debug, Copy, Clone, PartialEq)]
 enum State {
     // DecideToPlaceOrMove,
-    SelectPieceInHand,
+    SelectPiece,
     SelectPlacingLocation,
     ConfirmPlacingLocation,
     // SelectPieceOnBoard,
@@ -386,7 +485,7 @@ enum State {
 
 fn print_prompt(state: &State, player_turn: PlayerNumber) {
     let prompt_string = match state {
-        State::SelectPieceInHand => format!("Player {}: Select a bug", player_turn),
+        State::SelectPiece => format!("Player {}: Select a bug", player_turn),
         State::SelectPlacingLocation => format!("Player {}: Choose a location", player_turn),
         State::ConfirmPlacingLocation => format!("Player {}: Are you quite sure about that?", player_turn),
     };
@@ -406,27 +505,6 @@ fn clamp(min: i32, value: i32, max: i32) -> i32 {
     else {
         value
     }
-}
-
-fn print_board(board: [[Piece; BOARD_SIZE]; BOARD_SIZE], selection: (usize, usize), show_selection: bool) {
-    for (i, row) in board.iter().enumerate() {
-        for (j, piece) in row.iter().enumerate() {
-            let mut selected: bool = i == selection.0 && j == selection.1;
-            selected &= show_selection;
-            print_piece(*piece, selected);
-        }
-        println!();
-    }
-}
-
-fn print_hand(hand: &[Piece], selection: usize, show_selection: bool) {
-    print!("                                                  ");
-    for (i, piece) in hand.iter().enumerate() {
-        let mut selected = i == selection;
-        selected &= show_selection;
-        print_piece(*piece, selected);
-    }
-    println!();
 }
 
 fn create_hand(player: PlayerNumber) -> Vec<Piece> {
