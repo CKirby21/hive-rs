@@ -327,8 +327,15 @@ impl Game {
 
         let selection = self.get_piece_selection();
         let piece_to_place = match selection.location {
-            Location::Board => self.board[selection.row][selection.col],
-            Location::Hand => self.player_with_turn.hand.remove(selection.col)
+            Location::Board => {
+
+                let piece = self.board[selection.row][selection.col];
+                self.board[selection.row][selection.col] = create_piece(Bug::None, PlayerNumber::None);
+                piece
+            },
+            Location::Hand => {
+                self.player_with_turn.hand.remove(selection.col)
+            }
         };
         self.board[self.board_selection.0][self.board_selection.1] = piece_to_place;
         self.piece_selection_vec_index = 0;
