@@ -18,16 +18,14 @@ fn main() {
 
     let mut game = Game::new();
     game.print();
+    game.update();
 
     let stdout = Term::buffered_stdout();
 
-    'game_loop: loop {
+    loop {
         if let Ok(character) = stdout.read_char() {
-            game.find_piece_locations();
-            game.find_placeable_locations();
             match game.state {
                 State::SelectPiece => {
-                    assert!(!game.player_with_turn.hand.is_empty());
                     match character {
                         LEFT_KEY => {
                             game.move_piece_cursor(MoveDirection::Previous);
@@ -36,8 +34,8 @@ fn main() {
                             game.move_piece_cursor(MoveDirection::Next);
                         },
                         ADVANCE_KEY => {
+                            game.clear_selections(); // FIXME
                             game.state = State::SelectPlacingLocation;
-                            game.board_selection = game.placeable_location_vec[0]
                         },
                         _ => continue,
                     }
@@ -45,10 +43,10 @@ fn main() {
                 State::SelectPlacingLocation => {
                     match character {
                         LEFT_KEY => {
-                            game.move_placeable_location_cursor(MoveDirection::Previous);
+                            game.move_location_cursor(MoveDirection::Previous);
                         },
                         RIGHT_KEY => {
-                            game.move_placeable_location_cursor(MoveDirection::Next);
+                            game.move_location_cursor(MoveDirection::Next);
                         },
                         ADVANCE_KEY => {
                             game.state = State::ConfirmPlacingLocation;
@@ -73,6 +71,7 @@ fn main() {
                     }
                 },
             }
+            game.update();
             game.print();
         }
     }
@@ -260,6 +259,15 @@ impl Game {
         }
     }
 
+    fn clear_selections(&mut self) {
+        self.board_selection = self.placeable_location_vec[0]
+    }
+
+    fn update(&mut self) {
+        self.find_piece_locations();
+        self.find_placeable_locations();
+    }
+
     fn get_piece_selection(&self) -> Selection {
         self.piece_selection_vec[self.piece_selection_vec_index]
     }
@@ -286,7 +294,7 @@ impl Game {
         }
     }
 
-    fn move_placeable_location_cursor(&mut self, move_direction: MoveDirection) {
+    fn move_location_cursor(&mut self, move_direction: MoveDirection) {
 
         // TODO Handle when player has nowhere to place
         assert!(!self.placeable_location_vec.is_empty());
