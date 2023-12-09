@@ -34,7 +34,6 @@ fn main() {
                             game.move_piece_cursor(MoveDirection::Next);
                         },
                         ADVANCE_KEY => {
-                            game.clear_selections(); // FIXME
                             game.state = State::SelectPlacingLocation;
                         },
                         _ => continue,
@@ -62,6 +61,7 @@ fn main() {
                         ADVANCE_KEY => {
                             game.place_selected_piece();
                             game.advance_turn();
+                            game.clear_selections();
                             game.state = State::SelectPiece;
                         },
                         BACK_KEY => {
@@ -203,7 +203,8 @@ fn create_piece(bug: Bug, player: PlayerNumber) -> Piece {
 #[derive(Debug, Copy, Clone, PartialEq)]
 enum Location {
     Board,
-    Hand
+    Hand,
+    None
 }
 
 #[derive(Debug, Copy, Clone)]
@@ -222,14 +223,13 @@ enum MoveDirection {
 #[derive(Debug)]
 struct Game {
     board: [[Piece; BOARD_SIZE]; BOARD_SIZE],
-    board_selection: (usize, usize),
     player_with_turn: Player,
     player_without_turn: Player,
     state: State,
-    placeable_location_selection: usize,
-    placeable_location_vec: Vec<(usize, usize)>,
-    piece_selection_vec_index: usize,
-    piece_selection_vec: Vec<Selection>,
+    piece_destination_vec_index: usize,
+    piece_destination_vec: Vec<Selection>,
+    piece_source_vec_index: usize,
+    piece_source_vec: Vec<Selection>,
 }
 
 impl Game {
@@ -239,56 +239,75 @@ impl Game {
         let board: [[Piece; BOARD_SIZE]; BOARD_SIZE] = [[create_piece(Bug::None, PlayerNumber::None); BOARD_SIZE]; BOARD_SIZE];
         let player_with_turn = Player::new(PlayerNumber::One);
         let player_without_turn = Player::new(PlayerNumber::Two);
-        let board_selection = FIRST_LOCATION;
         let state = State::SelectPiece;
-        let placeable_location_selection: usize = 0;
-        let placeable_location_vec = vec![(BOARD_SIZE / 2, BOARD_SIZE / 2)];
-        let piece_selection_vec_index: usize = 0;
-        let piece_selection_vec = vec![Selection{location: Location::Hand, row: 0, col: 0}];
+        let piece_destination_vec_index: usize = 0;
+        let piece_destination_vec = vec![Selection{location: Location::Board, row: 0, col: 0}];
+        let piece_source_vec_index: usize = 0;
+        let piece_source_vec = vec![Selection{location: Location::Hand, row: 0, col: 0}];
         
         Game {
             board,
-            board_selection,
             player_with_turn,
             player_without_turn,
             state,
-            placeable_location_selection,
-            placeable_location_vec,
-            piece_selection_vec_index,
-            piece_selection_vec
+            piece_destination_vec_index,
+            piece_destination_vec,
+            piece_source_vec_index,
+            piece_source_vec
         }
     }
 
     fn clear_selections(&mut self) {
-        self.board_selection = self.placeable_location_vec[0]
+        self.piece_source_vec = vec![];
+        self.piece_destination_vec = vec![];
+        self.piece_source_vec_index = 0;
+        self.piece_destination_vec_index = 0;
     }
 
     fn update(&mut self) {
-        self.find_piece_locations();
-        self.find_placeable_locations();
+        self.find_piece_sources();
+        self.find_piece_destinations();
     }
 
-    fn get_piece_selection(&self) -> Selection {
-        self.piece_selection_vec[self.piece_selection_vec_index]
+    fn get_piece_source(&self) -> Selection {
+        if self.piece_source_vec.is_empty() {
+            return Selection {
+                location: Location::None,
+                row: 0,
+                col: 0
+            }
+        }
+        self.piece_source_vec[self.piece_source_vec_index]
+    }
+
+    fn get_piece_destination(&self) -> Selection {
+        if self.piece_destination_vec.is_empty() {
+            return Selection {
+                location: Location::None,
+                row: 0,
+                col: 0
+            }
+        }
+        self.piece_destination_vec[self.piece_destination_vec_index]
     }
 
     fn move_piece_cursor(&mut self, move_direction: MoveDirection) {
         
         match move_direction {
             MoveDirection::Next => {
-                if self.piece_selection_vec_index >= self.piece_selection_vec.len() - 1 {
-                    self.piece_selection_vec_index = 0;
+                if self.piece_source_vec_index >= self.piece_source_vec.len() - 1 {
+                    self.piece_source_vec_index = 0;
                 }
                 else {
-                    self.piece_selection_vec_index += 1;
+                    self.piece_source_vec_index += 1;
                 }
             }
             MoveDirection::Previous => {
-                if self.piece_selection_vec_index == 0 {
-                    self.piece_selection_vec_index = self.piece_selection_vec.len() - 1
+                if self.piece_source_vec_index == 0 {
+                    self.piece_source_vec_index = self.piece_source_vec.len() - 1
                 }
                 else {
-                    self.piece_selection_vec_index -= 1;
+                    self.piece_source_vec_index -= 1;
                 }
             }
         }
@@ -297,48 +316,47 @@ impl Game {
     fn move_location_cursor(&mut self, move_direction: MoveDirection) {
 
         // TODO Handle when player has nowhere to place
-        assert!(!self.placeable_location_vec.is_empty());
+        assert!(!self.piece_destination_vec.is_empty());
         
         match move_direction {
             MoveDirection::Next => {
-                if self.placeable_location_selection >= self.placeable_location_vec.len() - 1 {
-                    self.placeable_location_selection = 0;
+                if self.piece_destination_vec_index >= self.piece_destination_vec.len() - 1 {
+                    self.piece_destination_vec_index = 0;
                 }
                 else {
-                    self.placeable_location_selection += 1;
+                    self.piece_destination_vec_index += 1;
                 }
             }
             MoveDirection::Previous => {
-                if self.placeable_location_selection == 0 {
-                    self.placeable_location_selection = self.placeable_location_vec.len() - 1
+                if self.piece_destination_vec_index == 0 {
+                    self.piece_destination_vec_index = self.piece_destination_vec.len() - 1
                 }
                 else {
-                    self.placeable_location_selection -= 1;
+                    self.piece_destination_vec_index -= 1;
                 }
             }
         }
-    
-        // FIXME update board selection better
-        self.board_selection = self.placeable_location_vec[self.placeable_location_selection];
     }
 
     // Not sure I like this function
     fn place_selected_piece(&mut self) {
 
-        let selection = self.get_piece_selection();
+        let selection = self.get_piece_source();
         let piece_to_place = match selection.location {
             Location::Board => {
-
-                let piece = self.board[selection.row][selection.col];
-                self.board[selection.row][selection.col] = create_piece(Bug::None, PlayerNumber::None);
-                piece
+                self.board[selection.row][selection.col]
             },
             Location::Hand => {
                 self.player_with_turn.hand.remove(selection.col)
+            },
+            Location::None => {
+                panic!();
             }
         };
-        self.board[self.board_selection.0][self.board_selection.1] = piece_to_place;
-        self.piece_selection_vec_index = 0;
+        let piece_destination = self.get_piece_destination();
+        self.board[selection.row][selection.col] = create_piece(Bug::None, PlayerNumber::None);
+        self.board[piece_destination.row][piece_destination.col] = piece_to_place;
+        self.piece_source_vec_index = 0;
     }
 
     fn advance_turn(&mut self) {
@@ -367,17 +385,27 @@ impl Game {
         board_selection_vec
     }
 
-    fn find_piece_locations(&mut self) {
+    fn find_piece_sources(&mut self) {
         
-        let mut piece_selection_vec = self.player_with_turn.get_hand_selection_vec();
+        let mut piece_source_vec = self.player_with_turn.get_hand_selection_vec();
         let board_selection_vec = self.get_board_selections();
-        piece_selection_vec.extend(board_selection_vec);
-        self.piece_selection_vec = piece_selection_vec;
+        piece_source_vec.extend(board_selection_vec);
+        self.piece_source_vec = piece_source_vec;
+    }
+
+    fn find_piece_destinations(&mut self) {
+        
+        let mut piece_destination_vec = vec![];
+        let placeable_location_vec = self.find_placeable_locations();
+        piece_destination_vec.extend(placeable_location_vec);
+        let movable_location_vec = self.find_movable_locations();
+        piece_destination_vec.extend(movable_location_vec);
+        self.piece_destination_vec = piece_destination_vec;
     }
 
     fn find_movable_locations(&mut self) -> Vec<Selection> {
         let mut moveable_location_vec: Vec<Selection> = vec![];
-        let selection = self.get_piece_selection();
+        let selection = self.get_piece_source();
         if selection.location != Location::Board {
             return moveable_location_vec;
         }
@@ -391,6 +419,11 @@ impl Game {
                     for (j, _piece) in row.iter().enumerate() {
                         // FIXME Ignores the indexes in the corners of the board
                         if i < 2 || self.board.len() - 2 <= i || j < 2 || self.board.len() - 2 <= j {
+                            continue;
+                        }
+
+                        let current_location_occupied = self.board[i][j].player != PlayerNumber::None;
+                        if current_location_occupied {
                             continue;
                         }
             
@@ -429,9 +462,13 @@ impl Game {
         moveable_location_vec
     }
 
-    fn find_placeable_locations(&mut self) {
+    fn find_placeable_locations(&mut self) -> Vec<Selection>{
 
-        let mut placeable_location_vec: Vec<(usize, usize)> = vec![];
+        let mut placeable_location_vec: Vec<Selection> = vec![];
+        let selection = self.get_piece_source();
+        if selection.location != Location::Hand {
+            return placeable_location_vec;
+        }
     
         let mut locations_occupied = 0;
     
@@ -478,7 +515,7 @@ impl Game {
                     continue;
                 }
     
-                placeable_location_vec.push((i, j));
+                placeable_location_vec.push(Selection { location: Location::Board, row: i, col: j });
             }
         }
     
@@ -486,32 +523,34 @@ impl Game {
         // pieces to play off of
         if locations_occupied <= 1 {
             if self.player_with_turn.number == PlayerNumber::One {
-                placeable_location_vec.push(FIRST_LOCATION);
+                placeable_location_vec.push(Selection { location: Location::Board, row: FIRST_LOCATION.0, col: FIRST_LOCATION.1 });
             }
             else if self.player_with_turn.number == PlayerNumber::Two {
-                placeable_location_vec.push((FIRST_LOCATION.0 - 2, FIRST_LOCATION.1));     // North
-                placeable_location_vec.push((FIRST_LOCATION.0 - 1, FIRST_LOCATION.1 - 1)); // Northwest
-                placeable_location_vec.push((FIRST_LOCATION.0 - 1, FIRST_LOCATION.1 + 1)); // Northeast
-                placeable_location_vec.push((FIRST_LOCATION.0 + 2, FIRST_LOCATION.1));     // South
-                placeable_location_vec.push((FIRST_LOCATION.0 + 1, FIRST_LOCATION.1 - 1)); // Southwest
-                placeable_location_vec.push((FIRST_LOCATION.0 + 1, FIRST_LOCATION.1 + 1)); // Southeast
+                placeable_location_vec.push(Selection { location: Location::Board, row: FIRST_LOCATION.0 - 2, col: FIRST_LOCATION.1 });     // North
+                placeable_location_vec.push(Selection { location: Location::Board, row: FIRST_LOCATION.0 - 1, col: FIRST_LOCATION.1 - 1 }); // Northwest
+                placeable_location_vec.push(Selection { location: Location::Board, row: FIRST_LOCATION.0 - 1, col: FIRST_LOCATION.1 + 1 }); // Northeast
+                placeable_location_vec.push(Selection { location: Location::Board, row: FIRST_LOCATION.0 + 2, col: FIRST_LOCATION.1 });     // South
+                placeable_location_vec.push(Selection { location: Location::Board, row: FIRST_LOCATION.0 + 1, col: FIRST_LOCATION.1 - 1 }); // Southwest
+                placeable_location_vec.push(Selection { location: Location::Board, row: FIRST_LOCATION.0 + 1, col: FIRST_LOCATION.1 + 1 }); // Southeast
             } else {
                 panic!();
             }
         }
-        self.placeable_location_vec = placeable_location_vec;
+        placeable_location_vec
     }
 
     fn print_board(&self) {
         for (i, row) in self.board.iter().enumerate() {
             for (j, piece) in row.iter().enumerate() {
-                let location_selected = i == self.board_selection.0 && j == self.board_selection.1;
-                let mut piece_selected = i == self.get_piece_selection().row && j == self.get_piece_selection().col;
-                piece_selected &= self.get_piece_selection().location == Location::Board;
+                let piece_destination = self.get_piece_destination();
+                let piece_source = self.get_piece_source();
+                let destination_selected = i == piece_destination.row && j == piece_destination.col;
+                let mut source_selected = i == piece_source.row && j == piece_source.col;
+                source_selected &= piece_source.location == Location::Board;
                 match self.state {
-                    State::SelectPiece => print_piece(*piece, piece_selected),
-                    State::SelectPlacingLocation => print_piece(*piece, location_selected),
-                    State::ConfirmPlacingLocation => print_piece(*piece, location_selected),
+                    State::SelectPiece => print_piece(*piece, source_selected),
+                    State::SelectPlacingLocation => print_piece(*piece, destination_selected),
+                    State::ConfirmPlacingLocation => print_piece(*piece, destination_selected),
                     _ => print_piece(*piece, false),
                 }
             }
@@ -537,8 +576,9 @@ impl Game {
         println!();
         print_prompt(&self.state, self.player_with_turn.number);
         println!();
-        self.player_with_turn.print_hand(self.get_piece_selection().col, true);
-        self.player_without_turn.print_hand(self.get_piece_selection().col, false);
+        let piece_source = self.get_piece_source();
+        self.player_with_turn.print_hand(piece_source.col, true);
+        self.player_without_turn.print_hand(piece_source.col, false);
         println!();
         self.print_board();
     }
