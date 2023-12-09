@@ -347,9 +347,7 @@ impl Game {
         self.player_without_turn = temp_player;
     }
 
-    fn find_piece_locations(&mut self) {
-        
-        let mut piece_selection_vec = self.player_with_turn.get_hand_selection_vec();
+    fn get_board_selections(&mut self) -> Vec<Selection>{
         let mut board_selection_vec = vec![];
 
         for (i, row) in self.board.iter().enumerate() {
@@ -366,8 +364,69 @@ impl Game {
                 }
             }
         }
+        board_selection_vec
+    }
+
+    fn find_piece_locations(&mut self) {
+        
+        let mut piece_selection_vec = self.player_with_turn.get_hand_selection_vec();
+        let board_selection_vec = self.get_board_selections();
         piece_selection_vec.extend(board_selection_vec);
         self.piece_selection_vec = piece_selection_vec;
+    }
+
+    fn find_movable_locations(&mut self) -> Vec<Selection> {
+        let mut moveable_location_vec: Vec<Selection> = vec![];
+        let selection = self.get_piece_selection();
+        if selection.location != Location::Board {
+            return moveable_location_vec;
+        }
+        let piece_to_move = self.board[selection.row][selection.col];
+        match piece_to_move.bug {
+            Bug::Grasshopper => {
+
+            },
+            Bug::Ant => {
+                for (i, row) in self.board.iter().enumerate() {
+                    for (j, _piece) in row.iter().enumerate() {
+                        // FIXME Ignores the indexes in the corners of the board
+                        if i < 2 || self.board.len() - 2 <= i || j < 2 || self.board.len() - 2 <= j {
+                            continue;
+                        }
+            
+                        let neighboring_piece_vec = vec![
+                            self.board[i - 2][j].player,     // North
+                            self.board[i - 1][j - 1].player, // Northwest
+                            self.board[i - 1][j + 1].player, // Northeast
+                            self.board[i + 2][j].player,     // South
+                            self.board[i + 1][j - 1].player, // Southwest
+                            self.board[i + 1][j + 1].player, // Southeast
+                        ];
+
+                        let mut neighboring_piece = false;
+                        for neighbor in neighboring_piece_vec {
+                            if neighbor != PlayerNumber::None {
+                                neighboring_piece = true;
+                            }
+                        }
+
+                        if !neighboring_piece {
+                            continue;
+                        }
+
+                        moveable_location_vec.push(
+                            Selection {
+                                location: Location::Board,
+                                row: i,
+                                col: j
+                            }
+                        )
+                    }
+                }
+            }
+            _ => {}
+        }
+        moveable_location_vec
     }
 
     fn find_placeable_locations(&mut self) {
