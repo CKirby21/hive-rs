@@ -161,7 +161,7 @@ impl Player {
         for (i, piece) in self.hand.iter().enumerate() {
             let mut selected = i == selection;
             selected &= show_selection;
-            print_piece(*piece, selected);
+            piece.print(selected);
         }
         println!();
     }
@@ -176,25 +176,28 @@ struct Piece {
     player: PlayerNumber,
 }
 
-fn print_piece(piece: Piece, selected: bool) {
-    let piece_string = format!("{}{}", piece.bug, piece.player);
-    let piece_string_colored = match piece.player {
-        PlayerNumber::One => piece_string.blue(),
-        PlayerNumber::Two => piece_string.red(),
-        _ => piece_string.white(),
-    };
+impl Piece {
 
-    if selected {
-        print!("|{}|", piece_string_colored);
-    } else {
-        print!(" {} ", piece_string_colored);
+    fn print(&self, selected: bool) {
+        let piece_string = format!("{}{}", self.bug, self.player);
+        let piece_string_colored = match self.player {
+            PlayerNumber::One => piece_string.blue(),
+            PlayerNumber::Two => piece_string.red(),
+            _ => piece_string.white(),
+        };
+    
+        if selected {
+            print!("|{}|", piece_string_colored);
+        } else {
+            print!(" {} ", piece_string_colored);
+        }
     }
-}
 
-fn create_piece(bug: Bug, player: PlayerNumber) -> Piece {
-    Piece {
-        bug,
-        player,
+    fn new(bug: Bug, player: PlayerNumber) -> Self {
+        Piece {
+            bug,
+            player,
+        }
     }
 }
 
@@ -236,7 +239,7 @@ impl Game {
     
     fn new() -> Self {
         // TODO make this a 3d array
-        let board: [[Piece; BOARD_SIZE]; BOARD_SIZE] = [[create_piece(Bug::None, PlayerNumber::None); BOARD_SIZE]; BOARD_SIZE];
+        let board: [[Piece; BOARD_SIZE]; BOARD_SIZE] = [[Piece::new(Bug::None, PlayerNumber::None); BOARD_SIZE]; BOARD_SIZE];
         let player_with_turn = Player::new(PlayerNumber::One);
         let player_without_turn = Player::new(PlayerNumber::Two);
         let state = State::SelectPiece;
@@ -354,7 +357,7 @@ impl Game {
             }
         };
         let piece_destination = self.get_piece_destination();
-        self.board[selection.row][selection.col] = create_piece(Bug::None, PlayerNumber::None);
+        self.board[selection.row][selection.col] = Piece::new(Bug::None, PlayerNumber::None);
         self.board[piece_destination.row][piece_destination.col] = piece_to_place;
         self.piece_source_vec_index = 0;
     }
@@ -548,10 +551,10 @@ impl Game {
                 let mut source_selected = i == piece_source.row && j == piece_source.col;
                 source_selected &= piece_source.location == Location::Board;
                 match self.state {
-                    State::SelectPiece => print_piece(*piece, source_selected),
-                    State::SelectPlacingLocation => print_piece(*piece, destination_selected),
-                    State::ConfirmPlacingLocation => print_piece(*piece, destination_selected),
-                    _ => print_piece(*piece, false),
+                    State::SelectPiece => piece.print(source_selected),
+                    State::SelectPlacingLocation => piece.print(destination_selected),
+                    State::ConfirmPlacingLocation => piece.print(destination_selected),
+                    _ => piece.print(false),
                 }
             }
             println!();
@@ -623,17 +626,17 @@ fn clamp(min: i32, value: i32, max: i32) -> i32 {
 
 fn create_hand(player: PlayerNumber) -> Vec<Piece> {
     let hand: Vec<Piece> = vec![
-        create_piece(Bug::Grasshopper, player),
-        create_piece(Bug::Grasshopper, player),
-        create_piece(Bug::Grasshopper, player),
-        create_piece(Bug::Spider, player),
-        create_piece(Bug::Spider, player),
-        create_piece(Bug::Ant, player),
-        create_piece(Bug::Ant, player),
-        create_piece(Bug::Ant, player),
-        create_piece(Bug::Queen, player),
-        create_piece(Bug::Beetle, player),
-        create_piece(Bug::Beetle, player),
+        Piece::new(Bug::Grasshopper, player),
+        Piece::new(Bug::Grasshopper, player),
+        Piece::new(Bug::Grasshopper, player),
+        Piece::new(Bug::Spider, player),
+        Piece::new(Bug::Spider, player),
+        Piece::new(Bug::Ant, player),
+        Piece::new(Bug::Ant, player),
+        Piece::new(Bug::Ant, player),
+        Piece::new(Bug::Queen, player),
+        Piece::new(Bug::Beetle, player),
+        Piece::new(Bug::Beetle, player),
     ];
     hand
 }
