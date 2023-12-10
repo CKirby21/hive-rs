@@ -1,5 +1,4 @@
-use std::fmt;
-
+use std::{fmt, fs::DirEntry};
 use console::Term;
 use colored::Colorize;
 
@@ -217,6 +216,84 @@ struct Selection {
     col: usize,
 }
 
+#[derive(Debug, Copy, Clone, PartialEq)]
+enum Direction {
+    North,
+    Northeast,
+    Southeast,
+    South,
+    Southwest,
+    Northwest
+}
+
+#[derive(Debug, Copy, Clone, PartialEq)]
+enum FindError {
+    NotFound
+}
+
+fn move_selection(selection: Selection, direction: Direction) -> Result<Selection, Selection> {
+    let mut moved_selection = selection;
+    if moved_selection.row < 2 || moved_selection.col < 2 {
+        return Err(moved_selection);
+    }
+    match direction {
+        Direction::North => {
+            moved_selection.row -= 2;
+        },
+        Direction::Northeast => {
+            moved_selection.row -= 1;
+            moved_selection.col += 1;
+        },
+        Direction::Southeast => {
+            moved_selection.row += 1;
+            moved_selection.col += 1;
+        },
+        Direction::South => {
+            moved_selection.row += 2;
+        },
+        Direction::Southwest => {
+            moved_selection.row += 1;
+            moved_selection.col -= 1;
+        },
+        Direction::Northwest => {
+            moved_selection.row -= 1;
+            moved_selection.col -= 1;
+        },
+    }
+    return Ok(moved_selection);
+}
+
+fn find_grasshopper_movable_location(board: [[Piece; BOARD_SIZE]; BOARD_SIZE], direction: Direction, selection: Selection) -> Result<Selection, FindError> {
+    let starting_selection = move_selection(selection, direction).unwrap();
+    let mut current_selection = starting_selection;
+    loop {
+        if current_selection.row >= board.len() || current_selection.col >= board.len() {
+            break;
+        }
+        let current_player = board[current_selection.row][current_selection.col].player;
+        // println!("{}, {}, {}", i, j, current_player);
+        if current_player == PlayerNumber::None {
+            if current_selection.row != starting_selection.row || current_selection.col != starting_selection.col {
+                
+                return Ok(
+                    Selection {
+                        location: Location::Board,
+                        row: current_selection.row,
+                        col: current_selection.col
+                    }
+                );
+            }
+            break;
+        }
+        let move_result = move_selection(current_selection, direction);
+        if move_result.is_err() {
+            break;
+        }
+        current_selection = move_result.unwrap();
+    }
+    return Err(FindError::NotFound);
+}
+
 ////////////////////////////////////////////////////////////////////////
 enum MoveDirection {
     Next,
@@ -413,9 +490,17 @@ impl Game {
             return moveable_location_vec;
         }
         let piece_to_move = self.board[selection.row][selection.col];
+        // FIXME at some point
         match piece_to_move.bug {
             Bug::Grasshopper => {
 
+                let direction_vec = vec![Direction::North, Direction::Northeast, Direction::Southeast, Direction::South, Direction::Southwest, Direction::Northwest];
+                for direction in direction_vec {
+                    let result = find_grasshopper_movable_location(self.board, direction, selection);
+                    if result.is_ok() {
+                        moveable_location_vec.push(result.unwrap());
+                    }
+                }
             },
             Bug::Ant => {
                 for (i, row) in self.board.iter().enumerate() {
