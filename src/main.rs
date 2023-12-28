@@ -226,6 +226,15 @@ enum Direction {
     Northwest
 }
 
+const DIRECTION_ARR: [Direction; 6] = [
+    Direction::North, 
+    Direction::Northeast, 
+    Direction::Southeast, 
+    Direction::South, 
+    Direction::Southwest, 
+    Direction::Northwest
+];
+
 #[derive(Debug, Copy, Clone, PartialEq)]
 enum FindError {
     NotFound
@@ -294,6 +303,53 @@ fn find_grasshopper_movable_location(board: [[Piece; BOARD_SIZE]; BOARD_SIZE], d
     return Err(FindError::NotFound);
 }
 
+fn find_ant_locations(board: [[Piece; BOARD_SIZE]; BOARD_SIZE], selection: Selection) -> Vec<Selection> {
+    let mut board_clone = board.clone();
+    board_clone[selection.row][selection.col] = Piece::new(Bug::None, PlayerNumber::None);
+    
+    let mut location_vec = vec![];
+    for (i, row) in board_clone.iter().enumerate() {
+        for (j, _piece) in row.iter().enumerate() {
+
+            if check_for_occupied_location(board_clone, i, j) {
+                continue;
+            }
+
+            if !check_for_neighboring_piece(board_clone, i, j) {
+                continue;
+            }
+
+            if !check_for_slide_in(board_clone, i, j) {
+                continue;
+            }
+
+            location_vec.push(
+                Selection {
+                    location: Location::Board,
+                    row: i,
+                    col: j
+                }
+            )
+        }
+    }
+    location_vec
+}
+
+fn find_queen_locations(board: [[Piece; BOARD_SIZE]; BOARD_SIZE], selection: Selection) -> Vec<Selection> {
+    let ant_location_vec = find_ant_locations(board, selection);
+    let mut location_vec = vec![];
+    for direction in DIRECTION_ARR {
+        let result = move_selection(selection, direction);
+        if result.is_ok() {
+            let current_selection = result.unwrap();
+            if ant_location_vec.contains(&current_selection) {
+                location_vec.push(current_selection);
+            } 
+        }
+    }
+    location_vec
+}
+
 fn get_neighboring_piece_vec(board: [[Piece; BOARD_SIZE]; BOARD_SIZE], row: usize, col: usize) -> Vec<Piece> {
     let mut neighboring_piece_vec: Vec<Piece> = vec![];
     // North
@@ -360,8 +416,7 @@ fn check_for_occupied_location(board: [[Piece; BOARD_SIZE]; BOARD_SIZE], row: us
 fn discover(board: [[Piece; BOARD_SIZE]; BOARD_SIZE], selection: Selection, set: &mut HashSet<Selection>){
     // println!("Called {} {}", selection.row, selection.col);
     set.insert(selection);
-    let direction_vec = vec![Direction::North, Direction::Northeast, Direction::Southeast, Direction::South, Direction::Southwest, Direction::Northwest];
-    for direction in direction_vec {
+    for direction in DIRECTION_ARR {
         let result = move_selection(selection, direction);   
         if result.is_ok() {
             let moved_selection = result.unwrap();
@@ -603,8 +658,7 @@ impl Game {
         match piece_to_move.bug {
             Bug::Grasshopper => {
 
-                let direction_vec = vec![Direction::North, Direction::Northeast, Direction::Southeast, Direction::South, Direction::Southwest, Direction::Northwest];
-                for direction in direction_vec {
+                for direction in DIRECTION_ARR {
                     let result = find_grasshopper_movable_location(self.board, direction, selection);
                     if result.is_ok() {
                         moveable_location_vec.push(result.unwrap());
@@ -612,30 +666,10 @@ impl Game {
                 }
             },
             Bug::Ant => {
-                for (i, row) in self.board.iter().enumerate() {
-                    for (j, _piece) in row.iter().enumerate() {
-
-                        if check_for_occupied_location(self.board, i, j) {
-                            continue;
-                        }
-            
-                        if !check_for_neighboring_piece(self.board, i, j) {
-                            continue;
-                        }
-
-                        if !check_for_slide_in(self.board, i, j) {
-                            continue;
-                        }
-
-                        moveable_location_vec.push(
-                            Selection {
-                                location: Location::Board,
-                                row: i,
-                                col: j
-                            }
-                        )
-                    }
-                }
+                moveable_location_vec = find_ant_locations(self.board, selection);
+            }
+            Bug::Queen => {
+                moveable_location_vec = find_queen_locations(self.board, selection);
             }
             _ => {}
         }
