@@ -323,6 +323,10 @@ fn get_neighboring_piece_vec(board: [[Piece; BOARD_SIZE]; BOARD_SIZE], row: usiz
     return neighboring_piece_vec
 }
 
+//////////////////////////////////////////////////////////////////////
+/// Rules
+//////////////////////////////////////////////////////////////////////
+
 fn check_for_neighboring_piece(board: [[Piece; BOARD_SIZE]; BOARD_SIZE], row: usize, col: usize) -> bool {
     let neighboring_piece_vec = get_neighboring_piece_vec(board, row, col);
     let mut neighboring_piece = false;
@@ -349,6 +353,27 @@ fn check_for_slide_in(board: [[Piece; BOARD_SIZE]; BOARD_SIZE], row: usize, col:
 fn check_for_occupied_location(board: [[Piece; BOARD_SIZE]; BOARD_SIZE], row: usize, col: usize) -> bool {
     let occupied_location = board[row][col].player != PlayerNumber::None;
     occupied_location
+}
+
+// FIXME
+fn check_for_broken_hive_if_empty(board: [[Piece; BOARD_SIZE]; BOARD_SIZE], row: usize, col: usize) -> bool {
+    let mut board_clone = board.clone();
+    board_clone[row][col] = Piece::new(Bug::None, PlayerNumber::None);
+    let mut broken_hive = false;
+    for (i, row) in board_clone.iter().enumerate() {
+        for (j, _piece) in row.iter().enumerate() {
+
+            if !check_for_occupied_location(board_clone, i, j) {
+                continue;
+            }
+
+            if check_for_neighboring_piece(board_clone, i, j) {
+                continue;
+            }
+            broken_hive = true;
+        }
+    }
+    broken_hive
 }
 
 ////////////////////////////////////////////////////////////////////////
@@ -508,15 +533,21 @@ impl Game {
         for (i, row) in self.board.iter().enumerate() {
             for (j, piece) in row.iter().enumerate() {
                 
-                if piece.player == self.player_with_turn.number {
-                    board_selection_vec.push(
-                        Selection {
-                            location: Location::Board,
-                            row: i,
-                            col: j
-                        }
-                    );
+                if piece.player != self.player_with_turn.number {
+                    continue;
                 }
+                
+                if check_for_broken_hive_if_empty(self.board, i, j) {
+                    continue;
+                }
+
+                board_selection_vec.push(
+                    Selection {
+                        location: Location::Board,
+                        row: i,
+                        col: j
+                    }
+                );
             }
         }
         board_selection_vec
