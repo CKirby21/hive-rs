@@ -331,7 +331,24 @@ fn check_for_neighboring_piece(board: [[Piece; BOARD_SIZE]; BOARD_SIZE], row: us
             neighboring_piece = true;
         }
     }
-    return neighboring_piece;
+    neighboring_piece
+}
+
+fn check_for_slide_in(board: [[Piece; BOARD_SIZE]; BOARD_SIZE], row: usize, col: usize) -> bool {
+    let neighboring_piece_vec = get_neighboring_piece_vec(board, row, col);
+    let mut neighboring_piece_count = 0;
+    for neighbor in neighboring_piece_vec {
+        if neighbor.player != PlayerNumber::None {
+            neighboring_piece_count += 1;
+        }
+    }
+    let slide_in: bool = neighboring_piece_count <= 4;
+    slide_in
+}
+
+fn check_for_occupied_location(board: [[Piece; BOARD_SIZE]; BOARD_SIZE], row: usize, col: usize) -> bool {
+    let occupied_location = board[row][col].player != PlayerNumber::None;
+    occupied_location
 }
 
 ////////////////////////////////////////////////////////////////////////
@@ -546,13 +563,15 @@ impl Game {
                 for (i, row) in self.board.iter().enumerate() {
                     for (j, _piece) in row.iter().enumerate() {
 
-                        let current_location_occupied = self.board[i][j].player != PlayerNumber::None;
-                        if current_location_occupied {
+                        if check_for_occupied_location(self.board, i, j) {
                             continue;
                         }
             
-                        let neighboring_piece: bool = check_for_neighboring_piece(self.board, i, j);
-                        if !neighboring_piece {
+                        if !check_for_neighboring_piece(self.board, i, j) {
+                            continue;
+                        }
+
+                        if !check_for_slide_in(self.board, i, j) {
                             continue;
                         }
 
