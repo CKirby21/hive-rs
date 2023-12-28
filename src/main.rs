@@ -1,4 +1,4 @@
-use std::{fmt, fs::DirEntry};
+use std::{fmt};
 use console::Term;
 use colored::Colorize;
 
@@ -638,8 +638,7 @@ impl Game {
                 match self.state {
                     State::SelectPiece => piece.print(source_selected),
                     State::SelectPlacingLocation => piece.print(destination_selected),
-                    State::ConfirmPlacingLocation => piece.print(destination_selected),
-                    _ => piece.print(false),
+                    State::ConfirmPlacingLocation => piece.print(destination_selected)
                 }
             }
             println!();
@@ -697,17 +696,17 @@ fn print_prompt(state: &State, player_turn: PlayerNumber) {
 
 ////////////////////////////////////////////////////////////////////////
 
-fn clamp(min: i32, value: i32, max: i32) -> i32 {
-    if value < min {
-        min
-    }
-    else if value > max {
-        max
-    }
-    else {
-        value
-    }
-}
+// fn clamp(min: i32, value: i32, max: i32) -> i32 {
+//     if value < min {
+//         min
+//     }
+//     else if value > max {
+//         max
+//     }
+//     else {
+//         value
+//     }
+// }
 
 fn create_hand(player: PlayerNumber) -> Vec<Piece> {
     let hand: Vec<Piece> = vec![
