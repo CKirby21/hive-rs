@@ -294,6 +294,46 @@ fn find_grasshopper_movable_location(board: [[Piece; BOARD_SIZE]; BOARD_SIZE], d
     return Err(FindError::NotFound);
 }
 
+fn get_neighboring_piece_vec(board: [[Piece; BOARD_SIZE]; BOARD_SIZE], row: usize, col: usize) -> Vec<Piece> {
+    let mut neighboring_piece_vec: Vec<Piece> = vec![];
+    // North
+    if row >= 2 {
+        neighboring_piece_vec.push(board[row - 2][col])
+    }
+    // Northwest
+    if row >= 1 && col >= 1 {
+        neighboring_piece_vec.push(board[row - 1][col - 1])
+    }
+    // Northeast
+    if row >= 1 && col <= board.len() - 2 {
+        neighboring_piece_vec.push(board[row - 1][col + 1])
+    }
+    // Southwest
+    if row <= board.len() - 2 && col >= 1 {
+        neighboring_piece_vec.push(board[row + 1][col - 1]) 
+    }
+    // Southeast
+    if row <= board.len() - 2 && col <= board.len() - 2 {
+        neighboring_piece_vec.push(board[row + 1][col + 1]) 
+    }
+    // South
+    if row <= board.len() - 3 {
+        neighboring_piece_vec.push(board[row + 2][col]) 
+    }
+    return neighboring_piece_vec
+}
+
+fn check_for_neighboring_piece(board: [[Piece; BOARD_SIZE]; BOARD_SIZE], row: usize, col: usize) -> bool {
+    let neighboring_piece_vec = get_neighboring_piece_vec(board, row, col);
+    let mut neighboring_piece = false;
+    for neighbor in neighboring_piece_vec {
+        if neighbor.player != PlayerNumber::None {
+            neighboring_piece = true;
+        }
+    }
+    return neighboring_piece;
+}
+
 ////////////////////////////////////////////////////////////////////////
 enum MoveDirection {
     Next,
@@ -505,32 +545,13 @@ impl Game {
             Bug::Ant => {
                 for (i, row) in self.board.iter().enumerate() {
                     for (j, _piece) in row.iter().enumerate() {
-                        // FIXME Ignores the indexes in the corners of the board
-                        if i < 2 || self.board.len() - 2 <= i || j < 2 || self.board.len() - 2 <= j {
-                            continue;
-                        }
 
                         let current_location_occupied = self.board[i][j].player != PlayerNumber::None;
                         if current_location_occupied {
                             continue;
                         }
             
-                        let neighboring_piece_vec = vec![
-                            self.board[i - 2][j].player,     // North
-                            self.board[i - 1][j - 1].player, // Northwest
-                            self.board[i - 1][j + 1].player, // Northeast
-                            self.board[i + 2][j].player,     // South
-                            self.board[i + 1][j - 1].player, // Southwest
-                            self.board[i + 1][j + 1].player, // Southeast
-                        ];
-
-                        let mut neighboring_piece = false;
-                        for neighbor in neighboring_piece_vec {
-                            if neighbor != PlayerNumber::None {
-                                neighboring_piece = true;
-                            }
-                        }
-
+                        let neighboring_piece: bool = check_for_neighboring_piece(self.board, i, j);
                         if !neighboring_piece {
                             continue;
                         }
@@ -562,10 +583,6 @@ impl Game {
     
         for (i, row) in self.board.iter().enumerate() {
             for (j, _piece) in row.iter().enumerate() {
-                // FIXME Ignores the indexes in the corners of the board
-                if i < 2 || self.board.len() - 2 <= i || j < 2 || self.board.len() - 2 <= j {
-                    continue;
-                }
     
                 let current_location_occupied = self.board[i][j].player != PlayerNumber::None;
                 if current_location_occupied {
@@ -573,22 +590,15 @@ impl Game {
                     continue;
                 }
     
-                let neighboring_piece_vec = vec![
-                    self.board[i - 2][j].player,     // North
-                    self.board[i - 1][j - 1].player, // Northwest
-                    self.board[i - 1][j + 1].player, // Northeast
-                    self.board[i + 2][j].player,     // South
-                    self.board[i + 1][j - 1].player, // Southwest
-                    self.board[i + 1][j + 1].player, // Southeast
-                ];
+                let neighboring_piece_vec = get_neighboring_piece_vec(self.board, i, j);
     
                 let mut neighboring_piece_from_another_player = false;
                 let mut neighboring_piece_from_same_player = false;
                 for neighbor in neighboring_piece_vec {
-                    if neighbor == self.player_with_turn.number {
+                    if neighbor.player == self.player_with_turn.number {
                         neighboring_piece_from_same_player = true;
                     }
-                    else if neighbor == PlayerNumber::None {
+                    else if neighbor.player == PlayerNumber::None {
                         // Do nothing
                     }
                     else {
