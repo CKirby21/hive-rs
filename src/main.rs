@@ -1,4 +1,4 @@
-use std::{fmt};
+use std::{fmt, collections::HashSet};
 use console::Term;
 use colored::Colorize;
 
@@ -202,14 +202,14 @@ impl Piece {
 
 ////////////////////////////////////////////////////////////////////////
 
-#[derive(Debug, Copy, Clone, PartialEq)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
 enum Location {
     Board,
     Hand,
     None
 }
 
-#[derive(Debug, Copy, Clone)]
+#[derive(Hash, Eq, PartialEq, Debug, Copy, Clone)]
 struct Selection {
     location: Location,
     row: usize,
@@ -232,7 +232,7 @@ enum FindError {
 }
 
 fn move_selection(selection: Selection, direction: Direction) -> Result<Selection, Selection> {
-    let mut moved_selection = selection;
+    let mut moved_selection = selection.clone();
     if moved_selection.row < 2 || moved_selection.col < 2 {
         return Err(moved_selection);
     }
@@ -355,24 +355,45 @@ fn check_for_occupied_location(board: [[Piece; BOARD_SIZE]; BOARD_SIZE], row: us
     occupied_location
 }
 
+// Recursive function to navigate the board and fill a set of connected pieces from the starting selection.
+// May bite me in the future but for now it seems to get the job done
+fn discover(board: [[Piece; BOARD_SIZE]; BOARD_SIZE], selection: Selection, set: &mut HashSet<Selection>){
+    // println!("Called {} {}", selection.row, selection.col);
+    set.insert(selection);
+    let direction_vec = vec![Direction::North, Direction::Northeast, Direction::Southeast, Direction::South, Direction::Southwest, Direction::Northwest];
+    for direction in direction_vec {
+        let result = move_selection(selection, direction);   
+        if result.is_ok() {
+            let moved_selection = result.unwrap();
+            if !check_for_occupied_location(board, moved_selection.row, moved_selection.col) {
+                continue;
+            }
+            if set.contains(&Selection{location: Location::Board, row: moved_selection.row, col: moved_selection.col}) {
+                continue;
+            }
+            discover(board, moved_selection, set);
+        }
+    }
+}
+
 // FIXME
 fn check_for_broken_hive_if_empty(board: [[Piece; BOARD_SIZE]; BOARD_SIZE], row: usize, col: usize) -> bool {
     let mut board_clone = board.clone();
     board_clone[row][col] = Piece::new(Bug::None, PlayerNumber::None);
-    let mut broken_hive = false;
+    
+    let mut occupied_locations = vec![];
     for (i, row) in board_clone.iter().enumerate() {
         for (j, _piece) in row.iter().enumerate() {
-
-            if !check_for_occupied_location(board_clone, i, j) {
-                continue;
+            if check_for_occupied_location(board_clone, i, j) {
+                occupied_locations.push(Selection{location: Location::Board, row: i, col: j});
             }
-
-            if check_for_neighboring_piece(board_clone, i, j) {
-                continue;
-            }
-            broken_hive = true;
         }
     }
+    
+    let mut occupied_location_set = HashSet::new();
+    discover(board_clone, occupied_locations[0], &mut occupied_location_set);
+    
+    let broken_hive = occupied_location_set.len() != occupied_locations.len();
     broken_hive
 }
 
