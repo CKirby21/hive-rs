@@ -2,7 +2,7 @@ use std::{fmt};
 use console::Term;
 use colored::Colorize;
 
-const BOARD_SIZE: usize = 35;
+const BOARD_SIZE: usize = 40;
 const FIRST_LOCATION: (usize, usize) = (BOARD_SIZE / 2, BOARD_SIZE / 2);
 const ADVANCE_KEY: char = 'e';
 const BACK_KEY: char = 'q';
@@ -178,7 +178,7 @@ struct Piece {
 impl Piece {
 
     fn print(&self, selected: bool) {
-        let piece_string = format!("{}{}", self.bug, self.player);
+        let piece_string = format!("{}", self.bug);
         let piece_string_colored = match self.player {
             PlayerNumber::One => piece_string.blue(),
             PlayerNumber::Two => piece_string.red(),
