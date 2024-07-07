@@ -1,6 +1,6 @@
 use colored::Colorize;
 use console::Term;
-use std::{collections::HashSet, fmt};
+use std::{collections::HashSet, fmt::{self, write}};
 
 const BOARD_SIZE: usize = 40;
 const FIRST_LOCATION: (usize, usize) = (BOARD_SIZE / 2, BOARD_SIZE / 2);
@@ -109,14 +109,13 @@ enum PlayerNumber {
 impl fmt::Display for PlayerNumber {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            PlayerNumber::None => write!(f, " "),
+            PlayerNumber::None => write(idkfjkjdfl, args) 
+            print!()
             PlayerNumber::One => write!(f, "1"),
             PlayerNumber::Two => write!(f, "2"),
         }
     }
 }
-
-/////////////////////////////////////////////////////////////////////////
 
 #[derive(Debug, Clone)]
 struct Player {
